@@ -34,6 +34,7 @@ It's dressed like the classic in-game interface: bevelled brown stone panels, pi
   - fairy rings, spirit trees, gnome gliders, magic carpets, quetzals and mushtrees
   - ships, charter ships, canoes, minecarts and balloons
   - portals and levers, agility shortcuts, minigame teleports
+  - your player-owned house (see below)
 - **One-line summary on the Step tab**, e.g. *Travel: Cast Varrock Teleport → Walk 51 tiles south-east*. Tap it for the full route.
 - **Route tab:** each leg with what it needs, e.g. *Magic 25 · 3 Air rune, 1 Fire rune, 1 Law rune* or *needs Tree Gnome Village*, plus total walking distance and time.
 - **Climbs and caves are spelled out:** *Climb down the ladder*, *Climb up the ladder (×2)*.
@@ -41,6 +42,12 @@ It's dressed like the classic in-game interface: bevelled brown stone panels, pi
 - **Your account (optional):** type your RuneScape name to
   - load your levels from the official hiscores, so it skips teleports and shortcuts you can't use yet
   - import finished quests from WikiSync, if you've played with RuneLite's WikiSync plugin
+- **Travel through your house.** Switch on *Your house* in Travel settings and tick what you've built. Routes can then:
+  - get you home with the Teleport to House spell, house tablets or a Construction cape, including the *Outside* option
+  - walk out of the exit portal at your house location (Rimmington, Taverley, Pollnivneach, Rellekka, Brimhaven, Yanille, Hosidius, Prifddinas or Aldarin)
+  - use your portal chamber or portal nexus destinations, e.g. *Break a Teleport to House tablet → In your house: Kharyrll Portal*
+  - use your jewellery box (basic, fancy or ornate), mounted glory, mythical cape, Xeric's talisman and digsite pendant
+  - use the fairy ring and spirit tree in your garden
 - **Mark done** on any quest card, and finishing a quest in the overlay marks it automatically, so quest-locked transport such as spirit trees and gliders unlocks in your routes.
 - Planned on the phone in the background, usually in well under a second.
 
@@ -182,6 +189,7 @@ Switch off anything you don't have in **Travel settings**.
 - A few puzzle-heavy quests show a section title as the step text where Quest Helper uses an in-game puzzle solver the overlay can't copy.
 - About 1 in 5 steps are inside quest instances or puzzle areas the walking map doesn't cover. Those show no route, only the step text.
 - Routes assume you have the runes, jewellery and unlocks for anything switched on in Travel settings.
+- The app can't see your house, so house routes only use what you've ticked under *Your house*. Leave a portal unticked if you're not sure.
 - Free-to-play mode doesn't fence off members-only areas while walking. It only limits teleports and boats.
 - It can't tell when you finish a step, by design. That's what keeps it within Jagex's rules.
 - Android only. iPhones don't let apps draw over other apps.

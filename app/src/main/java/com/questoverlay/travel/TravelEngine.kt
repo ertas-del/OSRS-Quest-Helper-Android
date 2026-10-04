@@ -58,6 +58,29 @@ object TravelEngine {
         return sorted
     }
 
+    @Volatile private var portalNamesCache: List<String>? = null
+
+    /** Names of the portals (and nexus destinations) a house can have, read from the transport data. */
+    fun housePortalNames(context: Context): List<String> {
+        portalNamesCache?.let { return it }
+        val names = LinkedHashSet<String>()
+        try {
+            context.applicationContext.assets.open("transports.tsv").bufferedReader().useLines { lines ->
+                for (line in lines) {
+                    val i = line.lastIndexOf('\t')
+                    if (i < 0) continue
+                    val tag = line.substring(i + 1)
+                    if (tag.startsWith("portal:")) names.add(tag.removePrefix("portal:"))
+                }
+            }
+        } catch (e: Exception) {
+            // No list means no portal choices; everything else still works.
+        }
+        val sorted = names.sortedWith(compareBy({ it.startsWith("Respawn") }, { it.lowercase() }))
+        portalNamesCache = sorted
+        return sorted
+    }
+
     /** Cached answer, if this exact question has been asked before. */
     fun cached(start: Int, target: Int, profile: TravelProfile): Result? =
         synchronized(cache) { cache[Key(start, target, profile)] }

@@ -173,7 +173,7 @@ class RouteFinder(private val map: CollisionMap, private val table: TransportTab
         return Route(buildLegs(start, found), costOf(found), expanded)
     }
 
-    private fun penalty(link: Link): Int = when (link.type) {
+    private fun penalty(link: Link): Int = if (link.poh.isNotEmpty()) pohPenalty(link) else when (link.type) {
         "SPELL" -> 8                   // runes
         "TELEPORT_ITEM" -> 8           // charges / tablets
         "HOME_TELEPORT" -> 25          // long cast and a 30-minute cooldown
@@ -185,6 +185,13 @@ class RouteFinder(private val map: CollisionMap, private val table: TransportTab
         "OBELISK" -> 15                // random destination, Wilderness
         "AGILITY_SHORTCUT" -> if (link.items.isNotBlank()) 20 else 0 // grapples and the like
         else -> 0
+    }
+
+    /** Getting into the house costs a teleport; everything inside it is quick and free. */
+    private fun pohPenalty(link: Link): Int = when {
+        link.poh == "arrive" || link.poh.startsWith("outside:") -> if (link.type == "SPELL") 8 else 6
+        link.poh.startsWith("home:") -> 2
+        else -> 1
     }
 
     // ------------------------------------------------------------------ turning a path into legs
@@ -304,7 +311,7 @@ class RouteFinder(private val map: CollisionMap, private val table: TransportTab
             else -> ""
         }
         val title = if (tiles <= 2 && toward != null) "Go to the ${originNoun(toward)}$climb"
-        else "Walk $tiles tiles${if (dir.isNotEmpty()) " $dir" else ""}$target$climb"
+        else "Walk $tiles ${if (tiles == 1) "tile" else "tiles"}${if (dir.isNotEmpty()) " $dir" else ""}$target$climb"
         return Leg(Leg.Kind.WALK, title, "", from, to, tiles)
     }
 
@@ -337,13 +344,14 @@ class RouteFinder(private val map: CollisionMap, private val table: TransportTab
     }
 
     private fun linkLeg(link: Link, from: Int, to: Int): Leg {
+        if (link.poh.isNotEmpty()) return houseLeg(link, from, to)
         val dest = link.name.replace(Regex("^\\d+:\\s*"), "")
         val (kind, title) = when (link.type) {
             "SPELL" -> Leg.Kind.TELEPORT to "Cast $dest"
             "HOME_TELEPORT" -> Leg.Kind.TELEPORT to "Cast $dest (30-minute cooldown)"
             "TELEPORT_ITEM" -> Leg.Kind.TELEPORT to "Teleport with $dest"
             "MINIGAME" -> Leg.Kind.TELEPORT to "Grouping teleport: $dest (20-minute cooldown)"
-            "FAIRY_RING" -> Leg.Kind.TRANSPORT to dest.replace("Fairy ring ", "Fairy ring: dial ")
+            "FAIRY_RING" -> Leg.Kind.TRANSPORT to fairyTitle(dest, "Fairy ring")
             "CHARTER_SHIP" -> Leg.Kind.TRANSPORT to "Charter a ship to $dest"
             "SHIP", "BOAT" -> Leg.Kind.TRANSPORT to "Take the boat: $dest"
             "CANOE" -> Leg.Kind.TRANSPORT to "Canoe: $dest"
@@ -354,6 +362,42 @@ class RouteFinder(private val map: CollisionMap, private val table: TransportTab
             "LEVER" -> Leg.Kind.TRANSPORT to "Pull the lever: $dest"
             "PORTAL" -> Leg.Kind.TRANSPORT to "Portal: $dest"
             else -> Leg.Kind.TRANSPORT to dest
+        }
+        return Leg(kind, title, requirementText(link), from, to, 0)
+    }
+
+    /** "Fairy ring AIQ" -> "Fairy ring: dial AIQ"; "Fairy ring to Zanaris" stays a sentence. */
+    private fun fairyTitle(name: String, prefix: String): String = when {
+        name.startsWith("Fairy ring to ") -> prefix + " to " + name.removePrefix("Fairy ring to ")
+        name.startsWith("Fairy ring ") -> prefix + ": dial " + name.removePrefix("Fairy ring ")
+        else -> "$prefix: $name"
+    }
+
+    private fun houseLeg(link: Link, from: Int, to: Int): Leg {
+        val dest = link.name.replace(Regex("^[0-9A-Z]:\\s*"), "")
+        val tag = link.poh
+        val (kind, title) = when {
+            tag == "arrive" && link.type == "SPELL" -> Leg.Kind.TELEPORT to "Cast Teleport to House"
+            tag == "arrive" -> Leg.Kind.TELEPORT to dest.replace("Construction cape: Tele to POH", "Construction cape: teleport to your house")
+                .replace("Teleport to House tablet", "Break a Teleport to House tablet")
+            tag.startsWith("outside:") -> Leg.Kind.TELEPORT to when {
+                link.type == "SPELL" -> "Cast Teleport to House, Outside option"
+                link.name.startsWith("Construction cape") -> "Construction cape: Tele to POH (house set to teleport outside)"
+                else -> "Teleport to House tablet: Outside option"
+            }
+            tag.startsWith("home:") && Packed.x(from) == 1858 -> Leg.Kind.TRANSPORT to "Leave through your house's exit portal"
+            tag.startsWith("home:") -> Leg.Kind.TRANSPORT to "Enter your house through the house portal"
+            tag.startsWith("portal:") -> Leg.Kind.TELEPORT to "In your house: ${dest}"
+            tag.startsWith("box:") -> Leg.Kind.TELEPORT to "Jewellery box in your house: $dest"
+            tag == "mount:glory" -> Leg.Kind.TELEPORT to "Mounted glory in your house: $dest"
+            tag == "mount:mythical" -> Leg.Kind.TELEPORT to "Mounted mythical cape: Myths' Guild"
+            tag == "mount:xeric" -> Leg.Kind.TELEPORT to "Mounted Xeric's talisman: $dest"
+            tag == "mount:digsite" -> Leg.Kind.TELEPORT to "Mounted digsite pendant: $dest"
+            tag == "fairy" && Packed.x(from) == 1858 -> Leg.Kind.TRANSPORT to fairyTitle(dest, "Fairy ring in your house")
+            tag == "fairy" -> Leg.Kind.TRANSPORT to "Fairy ring: dial DIQ (your house)"
+            tag == "spirit" && Packed.x(from) == 1858 -> Leg.Kind.TRANSPORT to dest.replace("Spirit tree to ", "Spirit tree in your house to ")
+            tag == "spirit" -> Leg.Kind.TRANSPORT to "Spirit tree to your house"
+            else -> Leg.Kind.TELEPORT to dest
         }
         return Leg(kind, title, requirementText(link), from, to, 0)
     }

@@ -73,6 +73,57 @@ class TravelStore(context: Context) {
         completedQuests = s
     }
 
+    // ---------------------------------------------------------------- player-owned house
+
+    var houseOn: Boolean
+        get() = prefs.getBoolean("house_on", false)
+        set(v) = prefs.edit().putBoolean("house_on", v).apply()
+
+    /** The game's house-location number (see [TravelProfile.House.LOCATIONS]). */
+    var houseLocation: Int
+        get() = prefs.getInt("house_loc", 1)
+        set(v) = prefs.edit().putInt("house_loc", v).apply()
+
+    var housePortals: Set<String>
+        get() = prefs.getStringSet("house_portals", null)?.toSet() ?: emptySet()
+        set(v) = prefs.edit().putStringSet("house_portals", v.toSet()).apply()
+
+    /** 0 none, 1 basic, 2 fancy, 3 ornate */
+    var houseJewelleryBox: Int
+        get() = prefs.getInt("house_box", 0)
+        set(v) = prefs.edit().putInt("house_box", v.coerceIn(0, 3)).apply()
+
+    var houseMounted: Set<String>
+        get() = prefs.getStringSet("house_mounts", null)?.toSet() ?: emptySet()
+        set(v) = prefs.edit().putStringSet("house_mounts", v.toSet()).apply()
+
+    var houseFairyRing: Boolean
+        get() = prefs.getBoolean("house_fairy", false)
+        set(v) = prefs.edit().putBoolean("house_fairy", v).apply()
+
+    var houseSpiritTree: Boolean
+        get() = prefs.getBoolean("house_spirit", false)
+        set(v) = prefs.edit().putBoolean("house_spirit", v).apply()
+
+    var houseTablets: Boolean
+        get() = prefs.getBoolean("house_tabs", true)
+        set(v) = prefs.edit().putBoolean("house_tabs", v).apply()
+
+    var houseConCape: Boolean
+        get() = prefs.getBoolean("house_cape", false)
+        set(v) = prefs.edit().putBoolean("house_cape", v).apply()
+
+    fun house(): TravelProfile.House? = if (!houseOn) null else TravelProfile.House(
+        location = houseLocation,
+        portals = housePortals,
+        jewelleryBox = houseJewelleryBox,
+        mounted = houseMounted,
+        fairyRing = houseFairyRing,
+        spiritTree = houseSpiritTree,
+        tablets = houseTablets,
+        conCape = houseConCape
+    )
+
     fun profile(): TravelProfile = TravelProfile(
         members = members,
         spellbook = spellbook,
@@ -80,7 +131,8 @@ class TravelStore(context: Context) {
         levels = levels,
         completedQuests = if (checkQuests) completedQuests.ifEmpty { setOf("\u0000none") } else emptySet(),
         assumeUnlocks = assumeUnlocks,
-        avoidWilderness = avoidWilderness
+        avoidWilderness = avoidWilderness,
+        house = house()
     )
 
     fun startTile(context: Context): Int {

@@ -22,6 +22,7 @@ import android.widget.TextView
 import com.questoverlay.travel.AccountSync
 import com.questoverlay.travel.TravelEngine
 import com.questoverlay.travel.TravelMode
+import com.questoverlay.travel.TravelProfile
 import com.questoverlay.travel.TravelStore
 import java.text.DateFormat
 import java.util.Date
@@ -32,6 +33,7 @@ class TravelSettingsActivity : Activity() {
     private lateinit var store: TravelStore
     private lateinit var content: LinearLayout
     private lateinit var status: TextView
+    private var portalsOpen = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,6 +82,7 @@ class TravelSettingsActivity : Activity() {
         content.addView(accountCard())
         content.addView(basicsCard())
         content.addView(modesCard())
+        content.addView(houseCard())
         content.addView(rulesCard())
 
         val credit = Ui.text(
@@ -309,6 +312,137 @@ class TravelSettingsActivity : Activity() {
         TravelMode.MINIGAMES -> "Free teleports with a 20-minute cooldown."
         TravelMode.OBELISKS -> "Deep Wilderness. Risky."
         else -> null
+    }
+
+    // ---------------------------------------------------------------- your house
+
+    /**
+     * A grid of chips. Tapping one calls [onTap]; afterwards every chip is redrawn from [selected],
+     * so the same grid works for pick-one and pick-many without rebuilding the page.
+     */
+    private fun chipGrid(
+        items: List<Pair<String, String>>,
+        columns: Int,
+        selected: () -> Set<String>,
+        onTap: (String) -> Unit
+    ): View {
+        val grid = LinearLayout(this)
+        grid.orientation = LinearLayout.VERTICAL
+        val chips = ArrayList<Pair<String, TextView>>()
+        fun refresh() {
+            val on = selected()
+            for ((key, chip) in chips) {
+                val active = key in on
+                chip.setTextColor(if (active) Ui.TAN else Ui.GOLD)
+                chip.background = Ui.stoneButton(this, down = active)
+            }
+        }
+        for (rowItems in items.chunked(columns)) {
+            val row = LinearLayout(this)
+            row.orientation = LinearLayout.HORIZONTAL
+            for (i in 0 until columns) {
+                val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+                if (i > 0) lp.leftMargin = Ui.dp(this, 4)
+                val item = rowItems.getOrNull(i)
+                if (item == null) {
+                    row.addView(View(this), lp) // keep the columns lined up on a short last row
+                    continue
+                }
+                val chip = Ui.chip(this, item.second, false)
+                val hp = Ui.dp(this, 4)
+                chip.setPadding(hp, chip.paddingTop, hp, chip.paddingBottom)
+                chip.setOnClickListener {
+                    onTap(item.first)
+                    refresh()
+                }
+                chips.add(item.first to chip)
+                row.addView(chip, lp)
+            }
+            val rlp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            if (grid.childCount > 0) rlp.topMargin = Ui.dp(this, 4)
+            grid.addView(row, rlp)
+        }
+        refresh()
+        return grid
+    }
+
+    private fun heading(c: LinearLayout, text: String, topDp: Int = 12) {
+        c.addView(spaced(Ui.text(this, text, 13f, Ui.TEXT, bold = true), topDp))
+    }
+
+    private fun portalLabel(name: String): String =
+        if (name.startsWith("Respawn Portal (")) "Respawn: " + name.removePrefix("Respawn Portal (").removeSuffix(")")
+        else name.removeSuffix(" Portal")
+
+    private fun houseCard(): View {
+        val c = card("Your house")
+        note(c, "Routes can go through your player-owned house: teleport in, then use its portals, jewellery box or mounted items. The app can't see your house, so tick what you've built.")
+        switchRow(c, "I have a player-owned house", null, store.houseOn) {
+            store.houseOn = it
+            build()
+        }
+        if (!store.houseOn) return c
+        if (!store.members) {
+            note(c, "Houses are members-only, so they're skipped while Members is off.")
+        }
+
+        heading(c, "House location")
+        note(c, "Where your house portal is. Routes can walk out of it, or in through it.")
+        c.addView(spaced(chipGrid(
+            TravelProfile.House.LOCATIONS.map { it.first.toString() to it.second },
+            3,
+            { setOf(store.houseLocation.toString()) }
+        ) { store.houseLocation = it.toInt() }, 6))
+
+        heading(c, "Getting home")
+        switchRow(c, "Teleport to House tablets", "Only if you carry them.", store.houseTablets) { store.houseTablets = it }
+        switchRow(c, "Construction cape", "Teleports you home for free.", store.houseConCape) { store.houseConCape = it }
+        note(c, "The Teleport to House spell is used whenever teleport spells are on and you're on the standard spellbook.")
+
+        heading(c, "Portals and portal nexus")
+        note(c, "Tick every destination in your portal chamber or nexus.")
+        val names = TravelEngine.housePortalNames(this)
+        val chosen = store.housePortals.count { it in names }
+        val toggle = Ui.button(this, if (portalsOpen) "Hide portals ($chosen ticked)" else "Choose portals ($chosen ticked)", false) {
+            portalsOpen = !portalsOpen
+            build()
+        }
+        c.addView(spaced(toggle, 6))
+        if (portalsOpen) {
+            if (names.isEmpty()) {
+                note(c, "The portal list couldn't be read.")
+            } else {
+                c.addView(spaced(chipGrid(names.map { it to portalLabel(it) }, 2, { store.housePortals }) { name ->
+                    val s = store.housePortals.toMutableSet()
+                    if (!s.add(name)) s.remove(name)
+                    store.housePortals = s
+                }, 6))
+                note(c, "Respawn portals send you to your respawn point; tick only the one you've set.")
+            }
+        }
+
+        heading(c, "Jewellery box")
+        val tiers = listOf("None", "Basic", "Fancy", "Ornate")
+        c.addView(spaced(chipGrid(
+            tiers.mapIndexed { i, t -> i.toString() to t },
+            4,
+            { setOf(store.houseJewelleryBox.toString()) }
+        ) { store.houseJewelleryBox = it.toInt() }, 6))
+        note(c, "Basic: dueling and games teleports. Fancy adds combat and skills necklaces. Ornate adds glory and wealth rings.")
+
+        heading(c, "Mounted items")
+        for ((key, label) in TravelProfile.House.MOUNTED) {
+            switchRow(c, label, null, key in store.houseMounted) { on ->
+                val s = store.houseMounted.toMutableSet()
+                if (on) s.add(key) else s.remove(key)
+                store.houseMounted = s
+            }
+        }
+
+        heading(c, "Garden")
+        switchRow(c, "Fairy ring", "Also needs fairy rings switched on above.", store.houseFairyRing) { store.houseFairyRing = it }
+        switchRow(c, "Spirit tree", "Also needs spirit trees switched on above.", store.houseSpiritTree) { store.houseSpiritTree = it }
+        return c
     }
 
     private fun rulesCard(): View {

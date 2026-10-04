@@ -71,7 +71,9 @@ class Link(
     val items: String,
     val name: String,
     val spellbook: Int,
-    val needsUnlock: Boolean
+    val needsUnlock: Boolean,
+    /** For links into, out of or inside the player's house: what unlocks it (see TravelProfile.House). */
+    val poh: String = ""
 ) {
     val fromAnywhere: Boolean get() = origin < 0
 }
@@ -119,7 +121,8 @@ class TransportTable(val links: List<Link>) {
                             items = c[6],
                             name = c[7],
                             spellbook = c[9].toIntOrNull() ?: -1,
-                            needsUnlock = c.getOrNull(10) == "1"
+                            needsUnlock = c.getOrNull(10) == "1",
+                            poh = c.getOrNull(11) ?: ""
                         )
                     )
                 }

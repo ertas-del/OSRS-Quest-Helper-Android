@@ -12,7 +12,7 @@ Writes:
     collision-map.zip  the plugin's walkability map, copied as-is
 
 transports.tsv columns (tab separated):
-    type  origin  destination  ticks  skills  quests  items  name  maxWild  spellbook  unlock
+    type  origin  destination  ticks  skills  quests  items  name  maxWild  spellbook  unlock  poh
   origin       "x,y,z", or "*" for teleports you can use from anywhere
   skills       "Magic:25;Agility:8"
   quests       "The Grand Tree;Tree Gnome Village"
@@ -20,6 +20,8 @@ transports.tsv columns (tab separated):
   maxWild      highest Wilderness level it works from (-1 = no limit given)
   spellbook    0 standard, 1 ancient, 2 lunar, 3 arceuus, -1 not a spell
   unlock       1 when it also needs something we can't check (a diary, an unlock, item charges)
+  poh          for links into, out of or inside your house: arrive, outside:<location>, home:<location>, portal:<name>,
+               box:<basic|fancy|ornate>, mount:<glory|mythical|xeric|digsite>, fairy, spirit
 """
 import math
 import os
@@ -49,6 +51,7 @@ FILES = {
     "teleportation_levers": ("LEVER", 0),
     "teleportation_minigames": ("MINIGAME", 0),
     "teleportation_portals": ("PORTAL", 0),
+    "teleportation_portals_poh": ("POH_PORTAL", 0),
     "teleportation_spells": ("SPELL", 0),
     "teleportation_spells_home": ("HOME_TELEPORT", 0),
     "wilderness_obelisks": ("OBELISK", 0),
@@ -126,13 +129,54 @@ def spellbook(varbits):
 def needs_unlock(varbits, varplayers):
     """True when the link depends on game state we can't see (diaries, unlocks, charges).
     The spellbook check (varbit 4070) is handled separately."""
-    rest = [v for v in re.split(r"[;&|]+", varbits or "") if v.strip() and not v.strip().startswith("4070")]
+    # 4070 = spellbook, 4744 = "teleport inside your house" setting, 2187 = house location:
+    # all three are handled by the app's own settings.
+    rest = [v for v in re.split(r"[;&|]+", varbits or "")
+            if v.strip() and not v.strip().startswith(("4070", "4744", "2187"))]
     return 1 if rest or (varplayers or "").strip() else 0
 
 
 def in_house(p):
     """Player-owned house instance: nothing there is reachable without POH portals."""
     return p not in (ANY, PERM) and p[0] // 64 == 29 and p[1] // 64 == 110
+
+
+HOUSE_TILE = (1858, 7051, 0)
+
+
+def poh_tag(r):
+    """How a link involving the player-owned house is unlocked, decided by the app's house settings.
+    Empty for links that don't touch the house."""
+    o, d = r["origin"], r["dest"]
+    t = r["type"]
+    loc = re.search(r"\b2187=(\d+)", r.get("varbits", ""))
+    if t in ("SPELL", "TELEPORT_ITEM") and loc and not in_house(d):
+        # Teleport to House's "Outside" option lands at the house portal, which depends on where
+        # the player's house is. Without this tag these looked usable by everyone, everywhere.
+        return "outside:" + loc.group(1)
+    if not (in_house(o) or in_house(d)):
+        return ""
+    obj = r.get("obj", "")
+    if t in ("SPELL", "TELEPORT_ITEM") and in_house(d):
+        return "arrive"
+    if t == "PORTAL" and "Home Portal" in obj:
+        return f"home:{loc.group(1)}" if loc else ""
+    if t == "POH_PORTAL":
+        return "portal:" + r["name"]
+    if t == "TELEPORT_ITEM" and "Jewellery Box" in obj:
+        tier = re.search(r"(Basic|Fancy|Ornate) Jewellery Box", obj)
+        return "box:" + tier.group(1).lower() if tier else ""
+    if t == "TELEPORT_ITEM":
+        for key, label in (("Amulet of Glory", "glory"), ("Mythical cape", "mythical"),
+                           ("Xeric's Talisman", "xeric"), ("Digsite Pendant", "digsite")):
+            if key in obj:
+                return "mount:" + label
+        return ""
+    if t == "FAIRY_RING":
+        return "fairy"
+    if t == "SPIRIT_TREE":
+        return "spirit"
+    return ""  # e.g. the house obelisk: left out
 
 
 def clean(s):
@@ -189,6 +233,8 @@ def load_file(path, type_key):
                 "book": spellbook(rec.get("Varbits", "")),
                 "unlock": needs_unlock(rec.get("Varbits", ""), rec.get("VarPlayers", "")),
                 "section": section,
+                "obj": obj,
+                "varbits": rec.get("Varbits", ""),
             })
     return rows
 
@@ -248,6 +294,8 @@ def expand(rows, radius):
                 "wild": -1,
                 "book": -1,
                 "unlock": max(o.get("unlock", 0), d.get("unlock", 0)),
+                "obj": o.get("obj", ""),
+                "varbits": o.get("varbits", ""),
             })
     return out
 
@@ -264,6 +312,7 @@ def main():
     res = os.path.join(sp_root, "src/main/resources")
     lines = []
     counts = {}
+    seen_outside = set()
     for stem, (type_key, radius) in FILES.items():
         path = os.path.join(res, "transports", stem + ".tsv")
         if not os.path.exists(path):
@@ -271,14 +320,31 @@ def main():
         rows = expand(load_file(path, type_key), radius)
         counts[type_key] = counts.get(type_key, 0) + len(rows)
         for r in rows:
-            if in_house(r["origin"]) or in_house(r["dest"]):
+            poh = poh_tag(r)
+            if (in_house(r["origin"]) or in_house(r["dest"])) and not poh:
                 continue
+            # One way in is enough: skip the "(Inside)" duplicates and the max cape (needs every skill maxed).
+            if poh == "arrive" and ("(Inside)" in r["name"] or "Max cape" in r["name"]):
+                continue
+            if poh.startswith("outside:"):
+                if "Max cape" in r["name"]:
+                    continue
+                # "Teleport to House" in outside mode and its "(Outside)" option land on the same tile.
+                r["name"] = re.sub(r"\s*\(Outside\)$", "", r["name"])
+                key = (r["type"], r["dest"], r["name"])
+                if key in seen_outside:
+                    continue
+                seen_outside.add(key)
+            if poh:
+                r["unlock"] = 0 if poh != "box:basic" or not r.get("unlock") else r["unlock"]
+                if r["type"] == "POH_PORTAL" or poh.startswith(("box:", "mount:")):
+                    r["type"] = "POH"
             name = clean(r["name"]) or type_key.replace("_", " ").title()
             ticks = r["ticks"] if r["ticks"] > 0 else (4 if r["origin"] == ANY else 1)
             lines.append("\t".join([
                 r["type"], fmt_point(r["origin"]), fmt_point(r["dest"]), str(ticks),
                 r["skills"], r["quests"], clean(r["items"]), name, str(r["wild"]), str(r["book"]),
-                str(r.get("unlock", 0)),
+                str(r.get("unlock", 0)), poh,
             ]))
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "transports.tsv"), "w", encoding="utf-8") as fh:
