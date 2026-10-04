@@ -25,6 +25,21 @@ jobs:
             echo "PROJECT_DIR=." >> "$GITHUB_ENV"
           fi
 
+      # Pull the newest quest steps from the RuneLite Quest Helper plugin.
+      # If anything goes wrong, the quest list already in the project is used instead.
+      - name: Refresh quest data
+        continue-on-error: true
+        run: |
+          git clone --depth 1 https://github.com/Zoinkwiz/quest-helper /tmp/qh
+          python3 "$PROJECT_DIR/tools/convert_questhelper.py" /tmp/qh /tmp/quests.json
+          NEW=$(python3 -c "import json;print(len(json.load(open('/tmp/quests.json'))['quests']))")
+          echo "Converted $NEW quests"
+          if [ "$NEW" -ge 150 ]; then
+            cp /tmp/quests.json "$PROJECT_DIR/app/src/main/assets/quests.json"
+          else
+            echo "Too few quests converted, keeping the bundled list"
+          fi
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
