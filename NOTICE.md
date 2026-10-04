@@ -32,6 +32,16 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+The puzzle answers, rules and tables in `app/src/main/assets/puzzles.json` and
+`app/src/main/java/com/questoverlay/puzzles/Solvers.kt` are adapted from Quest Helper's puzzle code
+under the same licence.
+
+## Pixelify Sans font
+
+`app/src/main/assets/fonts/PixelifySans.ttf`: Copyright 2021 The Pixelify Sans Project Authors
+(https://github.com/eifetx/Pixelify-Sans), licensed under the SIL Open Font License 1.1.
+The full licence is in `app/src/main/assets/fonts/PixelifySans-OFL.txt`.
+
 ## Map
 
 The Map button opens the community OSRS world map at https://mejrs.github.io/osrs.

@@ -4,6 +4,8 @@ A floating quest guide that sits on top of Old School RuneScape on Android. It c
 
 It never reads, hooks or automates the game. You tick each step off yourself, so it works like having the wiki open beside you.
 
+It's dressed like the classic in-game interface: bevelled brown stone panels, a pixel font, orange titles and yellow labels with hard black shadows, a compass with a red north needle, and quest names coloured red, yellow and green like the in-game quest list.
+
 ---
 
 ## Features
@@ -15,9 +17,10 @@ It never reads, hooks or automates the game. You tick each step off yourself, so
 - **What to bring.** The first step of each section lists the items that section needs.
 - **Map button.** Opens the exact tile on the community OSRS world map. The card shrinks to a bubble so the map isn't covered.
 - **Progress bar** plus a *Step 5 of 21* counter.
-- **Four tabs:**
+- **Up to five tabs:**
   - **Step:** the current step, as above.
   - **Route:** the travel guide for this step (see below).
+  - **Puzzle:** answers and solvers for the quest's puzzles (see below). Only shown for quests that have puzzles.
   - **Items:** tap-to-tick checklist split into *Required* and *Recommended*, with quantities and tips (for example *"Can be obtained during the quest"*). Below that are the quest's skill, quest-point and quest requirements.
   - **All steps:** the whole quest grouped by section, with finished steps crossed off. It opens scrolled to where you are, and tapping any step jumps there.
 - **Drag** the card by its title to move it. **−** shrinks it to a gold bubble showing `5/21`; tap the bubble to open it again. **×** closes it.
@@ -41,11 +44,48 @@ It never reads, hooks or automates the game. You tick each step off yourself, so
 - **Mark done** on any quest card, and finishing a quest in the overlay marks it automatically, so quest-locked transport such as spirit trees and gliders unlocks in your routes.
 - Planned on the phone in the background, usually in well under a second.
 
+### Puzzles
+55 puzzles across 25 quests. A **Puzzle help** link appears on the steps where a puzzle comes up, and every
+puzzle in the quest is on the Puzzle tab.
+
+- **Answers (37):** puzzles that are the same for everyone, written out as tick-off checklists:
+  - all seven Song of the Elves light puzzles
+  - Forsaken Tower jugs and altar
+  - Blood Moon Rises clocks and forest
+  - the arrow chests
+  - the Recruitment Drive rooms
+  - the DT2 golem grid (with a diagram)
+  - Elemental Workshop II pipes
+  - Path of Glouphrie storeroom
+  - While Guthix Sleeps potions
+  - and more
+- **Solvers (18):** puzzles that change per player. You tap in what you see and the app works out the answer:
+
+| Quest | Puzzle | You enter |
+|-------|--------|-----------|
+| Sins of the Father | Mausoleum door grid | the 10 row and column numbers |
+| The Curse of Arrav | Metal door | the 4 letters on the code key |
+| Lunar Diplomacy | Dice | the number asked for |
+| The Fremennik Trials | Peer's door | which riddle you got |
+| Tribal Totem / Recruitment Drive | Letter locks | the lock's current letters |
+| The Heart of Darkness | Letter chest and arrow chest | the highlighted letters and words |
+| Dragon Slayer II | Crypt busts | three clues from the plaque |
+| Beneath Cursed Sands | Tomb riddle | the gods and offerings named |
+| The Forsaken Tower | Refinery potion | where "Cleansing fluid" appears in the notes |
+| A Kingdom Divided | Wall panel code and statues | the stone numbers, the city order |
+| Song of the Elves | Baxtorian pillars | the five pillar hints |
+| Eyes / Path of Glouphrie | Disc machines | the target discs |
+| Icthlarin's Little Helper | Door tiles | which tiles in a row are wrong |
+| Desert Treasure II | Growth sequence | the order you saw (a memory aid) |
+
+- **Tips** for the few puzzles whose answer is hidden from the player, such as the King's Ransom lockpick, the Lunar cloud floor and the DT2 rune rifts.
+- Everything works by tapping, so the game never loses focus to a keyboard.
+
 ### The quest picker
 - **Search** by name. Apostrophes and punctuation don't matter, so *"cooks"* finds Cook's Assistant.
 - **Filters:** All · Free · Members · Mini · Started.
 - **Smart order:** the quest you're showing comes first, then quests in progress, then everything else A–Z.
-- Each card shows type, difficulty, step count, requirements (*Needs: Mining 15, Rune Mysteries*) and your status.
+- Each card shows type, difficulty, step count, requirements (*Needs: Mining 15, Rune Mysteries*) and your status. Quest names are red (not started), yellow (in progress) or green (done), like the in-game list.
 - **Reset** appears once you've started a quest.
 - **Mark done** for quests you finished before installing the app.
 - **Overlay opacity** slider (40–100%).
@@ -146,6 +186,12 @@ Switch off anything you don't have in **Travel settings**.
 - It can't tell when you finish a step, by design. That's what keeps it within Jagex's rules.
 - Android only. iPhones don't let apps draw over other apps.
 
+## Where the puzzle answers come from
+
+The puzzle answers, rules and lookup tables come from reading the puzzle code in the RuneLite Quest Helper plugin, which
+solves them by reading the game. The app reworks each one to use what you can see instead. The content is in
+`tools/build_puzzles.py`; run `python3 tools/build_puzzles.py` to rebuild `puzzles.json` after editing it.
+
 ## Project layout
 
 ```
@@ -156,10 +202,12 @@ app/src/main/java/com/questoverlay/
   ProgressStore.kt    saved progress, ticks, position, opacity
   TravelSettingsActivity.kt   travel guide settings and account lookups
   travel/             route finder, transport data, travel settings, hiscores/WikiSync
+  puzzles/            puzzle solvers (Solvers.kt), puzzle data loader and the Puzzle tab screens
   Ui.kt               colours, compass, checkboxes, helpers
 app/src/main/assets/quests.json   the quest data
 tools/convert_questhelper.py      Quest Helper → quests.json converter
 tools/convert_transports.py       Shortest Path → transports.tsv, places.tsv, collision-map.zip
+tools/build_puzzles.py            puzzle answers and solver settings → puzzles.json
 app/src/main/assets/transports.tsv, collision-map.zip, places.tsv   travel data
 .github/workflows/build.yml       cloud build: refresh quests and travel data, build APK, publish release
 ```
@@ -167,5 +215,5 @@ app/src/main/assets/transports.tsv, collision-map.zip, places.tsv   travel data
 ## Credits
 
 Quest data © 2020 Zoinkwiz, BSD 2-Clause. Travel data © Skretzo and contributors (Shortest Path), BSD 2-Clause. See `NOTICE.md` for both licences.
-Map by [mejrs](https://mejrs.github.io/osrs).
+Map by [mejrs](https://mejrs.github.io/osrs). Pixel font: [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans) (SIL Open Font License).
 Not affiliated with Jagex or RuneLite. *Old School RuneScape* is a trademark of Jagex Ltd.

@@ -134,9 +134,10 @@ class TravelSettingsActivity : Activity() {
         name.setTextColor(Ui.TEXT)
         name.setHintTextColor(Ui.MUTED)
         name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+        name.typeface = Ui.typeface(this, bold = false)
         val p = Ui.dp(this, 12)
         name.setPadding(p, p, p, p)
-        name.background = Ui.rounded(this, Ui.SCREEN_BG, 10, Ui.STROKE, 1)
+        name.background = BevelDrawable(this, Ui.STONE_DARK, Ui.STONE_DARK, Ui.STONE_LIGHT, Ui.STROKE, raised = false)
         c.addView(spaced(name, 6))
 
         status = Ui.text(this, statusText(), 12f, Ui.TAN)
@@ -215,15 +216,17 @@ class TravelSettingsActivity : Activity() {
         sw.text = label
         sw.setTextColor(if (enabled) Ui.TEXT else Ui.MUTED)
         sw.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        sw.typeface = Ui.typeface(this, bold = false)
+        sw.setShadowLayer(0.01f, Ui.dpf(this, 1f), Ui.dpf(this, 1f), Ui.DARK_TEXT)
         sw.isChecked = checked
         sw.isEnabled = enabled
         sw.thumbTintList = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(Ui.GOLD, Ui.MUTED)
+            intArrayOf(Ui.TAN, Ui.MUTED)
         )
         sw.trackTintList = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(0x88FFC83D.toInt(), Ui.TRACK)
+            intArrayOf(0x99FF981F.toInt(), Ui.STONE_DARK)
         )
         sw.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6))
         sw.setOnCheckedChangeListener { _, isChecked -> onChange(isChecked) }
@@ -248,10 +251,7 @@ class TravelSettingsActivity : Activity() {
         row.orientation = LinearLayout.HORIZONTAL
         for ((i, b) in books.withIndex()) {
             val active = store.spellbook == i
-            val chip = Ui.text(this, b, 12f, if (active) Ui.DARK_TEXT else Ui.MUTED, bold = true)
-            chip.gravity = Gravity.CENTER
-            chip.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8))
-            chip.background = Ui.rounded(this, if (active) Ui.GOLD else Ui.SCREEN_BG, 16, Ui.STROKE, 1)
+            val chip = Ui.chip(this, b, active)
             chip.setOnClickListener {
                 store.spellbook = i
                 build()
@@ -270,6 +270,7 @@ class TravelSettingsActivity : Activity() {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val v = super.getView(position, convertView, parent) as TextView
                 v.setTextColor(Ui.TEXT)
+                v.typeface = Ui.typeface(context, bold = false)
                 return v
             }
         }

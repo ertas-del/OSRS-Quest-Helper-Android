@@ -150,11 +150,12 @@ class MainActivity : Activity() {
         box.setTextColor(Ui.TEXT)
         box.setHintTextColor(Ui.MUTED)
         box.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+        box.typeface = Ui.typeface(this, bold = false)
         box.imeOptions = EditorInfo.IME_ACTION_SEARCH
         box.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         val p = Ui.dp(this, 12)
         box.setPadding(p, p, p, p)
-        box.background = Ui.rounded(this, Ui.CARD_BG, 12, Ui.STROKE, 1)
+        box.background = BevelDrawable(this, Ui.STONE_DARK, Ui.STONE_DARK, Ui.STONE_LIGHT, Ui.STROKE, raised = false)
         box.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -177,9 +178,7 @@ class MainActivity : Activity() {
         row.layoutParams = lp
         val chips = ArrayList<TextView>()
         for (f in Filter.entries) {
-            val chip = Ui.text(this, f.label, 12f, Ui.MUTED, bold = true)
-            chip.gravity = Gravity.CENTER
-            chip.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8))
+            val chip = Ui.chip(this, f.label, f == filter)
             chip.setOnClickListener {
                 filter = f
                 styleChips(chips)
@@ -197,8 +196,8 @@ class MainActivity : Activity() {
     private fun styleChips(chips: List<TextView>) {
         for ((i, chip) in chips.withIndex()) {
             val active = Filter.entries[i] == filter
-            chip.setTextColor(if (active) Ui.DARK_TEXT else Ui.MUTED)
-            chip.background = Ui.rounded(this, if (active) Ui.GOLD else Ui.CARD_BG, 16, Ui.STROKE, 1)
+            chip.setTextColor(if (active) Ui.TAN else Ui.GOLD)
+            chip.background = Ui.stoneButton(this, down = active)
         }
     }
 
@@ -331,7 +330,14 @@ class MainActivity : Activity() {
         val isActive = OverlayService.running && store.activeQuestId == q.id
         if (isActive) c.background = Ui.rounded(this, Ui.CARD_BG, 14, Ui.GOLD, 2)
 
-        c.addView(Ui.text(this, q.name, 17f, Ui.GOLD, bold = true))
+        // Same colours as the in-game quest list: red not started, yellow in progress, green done.
+        val doneHere = step >= q.steps.size || travel.isQuestDone(q.name)
+        val nameColor = when {
+            doneHere -> Ui.GREEN
+            step > 0 -> Ui.TAN
+            else -> Ui.RED
+        }
+        c.addView(Ui.text(this, q.name, 17f, nameColor, bold = true))
         val meta = listOf(q.type, q.difficulty, "${q.steps.size} steps")
             .filter { it.isNotBlank() }
             .distinct()
@@ -353,7 +359,7 @@ class MainActivity : Activity() {
             step == 0 -> "Not started"
             else -> "In progress: step ${step + 1} of ${q.steps.size}"
         }
-        val statusColor = if (step >= q.steps.size || markedDone) Ui.GREEN else Ui.TEXT
+        val statusColor = if (step >= q.steps.size || markedDone) Ui.GREEN else Ui.MUTED
         val statusView = Ui.text(this, status, 13f, statusColor)
         statusView.setPadding(0, Ui.dp(this, 6), 0, 0)
         c.addView(statusView)

@@ -26,6 +26,10 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ScrollView
+import com.questoverlay.puzzles.PuzzleRepository
+import com.questoverlay.puzzles.PuzzleState
+import com.questoverlay.puzzles.PuzzleViews
 import com.questoverlay.travel.Leg
 import com.questoverlay.travel.Packed
 import com.questoverlay.travel.RouteFinder
@@ -44,7 +48,7 @@ import kotlin.math.roundToInt
  */
 class OverlayService : Service() {
 
-    private enum class Mode { STEP, ROUTE, ITEMS, ALL }
+    private enum class Mode { STEP, ROUTE, PUZZLE, ITEMS, ALL }
 
     private lateinit var wm: WindowManager
     private lateinit var store: ProgressStore
@@ -57,6 +61,12 @@ class OverlayService : Service() {
     private var collapsed = false
     private lateinit var travel: TravelStore
     private var pendingRoute: String? = null
+
+    // Puzzle tab: which puzzle is open, what the player has entered, and where the list was scrolled.
+    private val puzzleState = PuzzleState()
+    private var openPuzzle: String? = null
+    private var puzzleScroll: ScrollView? = null
+    private var puzzleScrollY = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -106,6 +116,7 @@ class OverlayService : Service() {
         store.activeQuestId = chosen.id
         mode = Mode.STEP
         collapsed = false
+        openPuzzle = null
 
         ensureOverlay()
         render()
@@ -310,6 +321,8 @@ class OverlayService : Service() {
     private fun render() {
         val frame = root ?: return
         val q = quest ?: return
+        puzzleScrollY = puzzleScroll?.scrollY ?: 0
+        puzzleScroll = null
         frame.removeAllViews()
         frame.alpha = store.opacity
         frame.addView(if (collapsed) buildBubble(q) else buildCard(q))
@@ -321,11 +334,12 @@ class OverlayService : Service() {
         val size = Ui.dp(this, 52)
         val bubble = TextView(this)
         bubble.text = if (step >= q.steps.size) "✓" else "${step + 1}/${q.steps.size}"
-        bubble.setTextColor(Ui.DARK_TEXT)
+        bubble.setTextColor(if (step >= q.steps.size) Ui.GREEN else Ui.GOLD)
         bubble.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
-        bubble.setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
+        bubble.typeface = Ui.typeface(this, bold = true)
+        bubble.setShadowLayer(0.01f, Ui.dpf(this, 1f), Ui.dpf(this, 1f), Ui.DARK_TEXT)
         bubble.gravity = Gravity.CENTER
-        bubble.background = Ui.oval(this, Ui.GOLD, Ui.STROKE, 2)
+        bubble.background = Ui.oval(this, Ui.CARD_BG, Ui.STROKE, 2)
         bubble.layoutParams = FrameLayout.LayoutParams(size, size)
         bubble.setOnTouchListener(DragListener { setCollapsed(false) })
         return bubble
@@ -346,6 +360,7 @@ class OverlayService : Service() {
         when {
             mode == Mode.ITEMS -> card.addView(buildItems(q))
             mode == Mode.ROUTE -> card.addView(buildRoute(q, step))
+            mode == Mode.PUZZLE -> card.addView(buildPuzzle(q))
             mode == Mode.ALL -> card.addView(buildAllSteps(q, step))
             step >= q.steps.size -> card.addView(buildComplete(q))
             else -> card.addView(buildStep(q, step))
@@ -356,9 +371,9 @@ class OverlayService : Service() {
 
     private fun iconButton(label: String, onClick: () -> Unit): TextView {
         val size = Ui.dp(this, 32)
-        val t = Ui.text(this, label, 18f, Ui.TEXT, bold = true)
+        val t = Ui.text(this, label, 18f, Ui.GOLD, bold = true)
         t.gravity = Gravity.CENTER
-        t.background = Ui.rounded(this, Ui.BTN_BG, 8, Ui.STROKE, 1)
+        t.background = Ui.stoneButton(this)
         val lp = LinearLayout.LayoutParams(size, size)
         lp.leftMargin = Ui.dp(this, 6)
         t.layoutParams = lp
@@ -398,16 +413,22 @@ class OverlayService : Service() {
         val total = max(1, q.steps.size)
         val bar = LinearLayout(this)
         bar.orientation = LinearLayout.HORIZONTAL
-        bar.background = Ui.rounded(this, Ui.TRACK, 3)
+        bar.background = Ui.rounded(this, 0xFF8C0000.toInt(), 0)
+        bar.setPadding(0, 0, 0, 0)
         val filled = View(this)
-        filled.background = Ui.rounded(this, Ui.GREEN, 3)
+        filled.background = Ui.rounded(this, 0xFF00A800.toInt(), 0)
         bar.addView(filled, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, step.toFloat()))
         bar.addView(View(this), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, (total - step).toFloat()))
-        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 5))
+        val frame = FrameLayout(this)
+        frame.background = Ui.rounded(this, Ui.STROKE, 0)
+        val p1 = Ui.dp(this, 1)
+        frame.setPadding(p1, p1, p1, p1)
+        frame.addView(bar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 8))
         lp.topMargin = Ui.dp(this, 8)
         lp.bottomMargin = Ui.dp(this, 8)
-        bar.layoutParams = lp
-        return bar
+        frame.layoutParams = lp
+        return frame
     }
 
     /** Keeps the whole card on screen, even in landscape: header, tabs and buttons need ~170dp. */
@@ -464,6 +485,7 @@ class OverlayService : Service() {
             col.addView(dirLabel)
         }
         travelLine(q, step)?.let { col.addView(it) }
+        puzzleLine(q, s)?.let { col.addView(it) }
         if (s.chat.isNotEmpty()) {
             val options = s.chat.joinToString("  ›  ")
             val chat = Ui.text(this, "Chat: $options", 12f, Ui.MUTED, italic = true)
@@ -802,6 +824,84 @@ class OverlayService : Service() {
         }
     }
 
+    // ---------------------------------------------------------------- puzzles
+
+    /** "Puzzle help" link on steps that have a puzzle. */
+    private fun puzzleLine(q: Quest, s: Step): View? {
+        val p = PuzzleRepository.forQuest(this, q.id).firstOrNull { it.matches(s.text) || it.matches(s.section) } ?: return null
+        val t = Ui.text(this, "\uD83E\uDDE9 Puzzle help: ${p.title}  \u203A", 12f, Ui.GOLD, bold = true)
+        t.setPadding(0, Ui.dp(this, 6), 0, 0)
+        t.setOnClickListener {
+            openPuzzle = p.id
+            puzzleScroll = null
+            puzzleScrollY = 0
+            setMode(Mode.PUZZLE)
+        }
+        return t
+    }
+
+    private fun buildPuzzle(q: Quest): View {
+        val puzzles = PuzzleRepository.forQuest(this, q.id)
+        val container = LinearLayout(this)
+        container.orientation = LinearLayout.VERTICAL
+        if (puzzles.size == 1) openPuzzle = puzzles[0].id
+        val p = puzzles.firstOrNull { it.id == openPuzzle }
+
+        val list = LinearLayout(this)
+        list.orientation = LinearLayout.VERTICAL
+        if (p == null) {
+            heading(list, "Puzzles in this quest")
+            for (each in puzzles) {
+                val tag = if (each.kind == "solver") "solver" else "answer"
+                val t = Ui.chip(this, "${each.title}  \u00B7 $tag", false)
+                t.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                t.setPadding(Ui.dp(this, 10), Ui.dp(this, 9), Ui.dp(this, 10), Ui.dp(this, 9))
+                t.setOnClickListener {
+                    openPuzzle = each.id
+                    puzzleScroll = null
+                    puzzleScrollY = 0
+                    render()
+                }
+                val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                lp.topMargin = Ui.dp(this, 4)
+                list.addView(t, lp)
+            }
+        } else {
+            val title = Ui.text(this, p.title, 14f, Ui.GOLD, bold = true)
+            list.addView(title)
+            list.addView(PuzzleViews(this, puzzleState) { render() }.build(p))
+        }
+
+        val scroll = MaxHeightScrollView(this, listMaxHeight(300))
+        scroll.addView(list)
+        val restore = puzzleScrollY
+        scroll.post { scroll.scrollTo(0, restore) }
+        puzzleScroll = scroll
+        container.addView(scroll)
+
+        val buttons = LinearLayout(this)
+        buttons.orientation = LinearLayout.HORIZONTAL
+        if (p != null && puzzles.size > 1) {
+            buttons.addView(Ui.button(this, "\u2039 Puzzles", false) {
+                openPuzzle = null
+                puzzleScroll = null
+                puzzleScrollY = 0
+                render()
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        }
+        if (q.wikiUrl.isNotBlank()) {
+            val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            if (buttons.childCount > 0) lp.leftMargin = Ui.dp(this, 8)
+            buttons.addView(Ui.button(this, "Wiki", false) { openUrl(q.wikiUrl) }, lp)
+        }
+        if (buttons.childCount > 0) {
+            val blp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            blp.topMargin = Ui.dp(this, 8)
+            container.addView(buttons, blp)
+        }
+        return container
+    }
+
     private fun buildTabs(q: Quest): View {
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
@@ -810,20 +910,25 @@ class OverlayService : Service() {
         row.layoutParams = lp
 
         val checked = store.checkedItems(q).size
-        val tabs = listOf(
+        val hasPuzzles = PuzzleRepository.forQuest(this, q.id).isNotEmpty()
+        val tabs = listOfNotNull(
             Mode.STEP to "Step",
             Mode.ROUTE to "Route",
-            Mode.ITEMS to (if (q.items.isEmpty()) "Items" else "Items $checked/${q.items.size}"),
-            Mode.ALL to "All steps"
+            if (hasPuzzles) Mode.PUZZLE to "Puzzle" else null,
+            Mode.ITEMS to (if (q.items.isEmpty() || hasPuzzles) "Items" else "Items $checked/${q.items.size}"),
+            Mode.ALL to (if (hasPuzzles) "All" else "All steps")
         )
         for ((tabMode, label) in tabs) {
             val active = mode == tabMode
-            val tab = Ui.text(this, label, 12f, if (active) Ui.GOLD else Ui.MUTED, bold = active)
-            tab.gravity = Gravity.CENTER
-            tab.setPadding(0, Ui.dp(this, 7), 0, Ui.dp(this, 7))
-            if (active) tab.background = Ui.rounded(this, 0x33FFC83D, 8)
+            val tab = Ui.chip(this, label, active, 11f)
+            tab.setPadding(Ui.dp(this, 2), Ui.dp(this, 7), Ui.dp(this, 2), Ui.dp(this, 7))
+            tab.maxLines = 1
+            // Shrink the label rather than wrap or clip it when the font is set large.
+            tab.setAutoSizeTextTypeUniformWithConfiguration(7, 11, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
             tab.setOnClickListener { setMode(tabMode) }
-            row.addView(tab, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            val tlp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            if (row.childCount > 0) tlp.leftMargin = Ui.dp(this, 3)
+            row.addView(tab, tlp)
         }
         return row
     }
