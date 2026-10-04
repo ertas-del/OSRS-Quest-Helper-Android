@@ -353,7 +353,7 @@ class OverlayService : Service() {
         card.orientation = LinearLayout.VERTICAL
         card.background = Ui.rounded(this, Ui.PANEL_BG, 14, Ui.STROKE, 2)
         card.setPadding(pad, pad, pad, pad)
-        card.layoutParams = FrameLayout.LayoutParams(Ui.dp(this, 300), ViewGroup.LayoutParams.WRAP_CONTENT)
+        card.layoutParams = FrameLayout.LayoutParams(Ui.dp(this, 320), ViewGroup.LayoutParams.WRAP_CONTENT)
 
         card.addView(buildHeader(q, step))
         card.addView(buildProgress(q, step))
@@ -920,11 +920,11 @@ class OverlayService : Service() {
         )
         for ((tabMode, label) in tabs) {
             val active = mode == tabMode
-            val tab = Ui.chip(this, label, active, 11f)
+            val tab = Ui.chip(this, label, active, 12f)
             tab.setPadding(Ui.dp(this, 2), Ui.dp(this, 7), Ui.dp(this, 2), Ui.dp(this, 7))
             tab.maxLines = 1
             // Shrink the label rather than wrap or clip it when the font is set large.
-            tab.setAutoSizeTextTypeUniformWithConfiguration(7, 11, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+            tab.setAutoSizeTextTypeUniformWithConfiguration(9, 12, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
             tab.setOnClickListener { setMode(tabMode) }
             val tlp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             if (row.childCount > 0) tlp.leftMargin = Ui.dp(this, 3)

@@ -28,8 +28,8 @@ import kotlin.math.roundToInt
 object Ui {
     // Stone
     val SCREEN_BG = 0xFF1C1813.toInt()
-    val PANEL_BG = 0xFF3E3529.toInt() // see-through-ness comes from the opacity slider
-    val CARD_BG = 0xFF3E3529.toInt()
+    val PANEL_BG = 0xFF352D23.toInt() // see-through-ness comes from the opacity slider
+    val CARD_BG = 0xFF352D23.toInt()
     val STONE_LIGHT = 0xFF6A5C48.toInt()
     val STONE_DARK = 0xFF19140F.toInt()
     val STROKE = 0xFF000000.toInt()
@@ -41,7 +41,7 @@ object Ui {
     val GOLD = 0xFFFF981F.toInt()      // orange: titles and highlights
     val TAN = 0xFFFFFF00.toInt()       // yellow: labels, sections, meta
     val TEXT = 0xFFFFFFFF.toInt()      // white: body text
-    val MUTED = 0xFFB8AC94.toInt()     // faded parchment: notes and hints
+    val MUTED = 0xFFD2C6AE.toInt()     // faded parchment: notes and hints
     val GREEN = 0xFF00E000.toInt()     // quest complete
     val RED = 0xFFFF2B2B.toInt()       // quest not started
     val DARK_TEXT = 0xFF000000.toInt()
@@ -120,14 +120,23 @@ object Ui {
     ): TextView {
         val t = TextView(ctx)
         t.text = s
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
+        // Nothing smaller than 12sp: small text is hard to read over a busy game screen.
+        val size = maxOf(sizeSp, 12f)
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
         t.setTextColor(color)
-        // Pixel fonts have no italic: the faded colour already marks hints.
-        t.typeface = typeface(ctx, bold)
-        t.includeFontPadding = false
+        // The pixel font only for big bold titles, where it reads well. Everything else uses the
+        // phone's own font, which stays sharp at small sizes.
+        val title = bold && size >= 16f
+        t.typeface = when {
+            title -> typeface(ctx, bold = true)
+            bold -> Typeface.create(Typeface.DEFAULT, 600, false)
+            else -> Typeface.DEFAULT
+        }
+        t.letterSpacing = if (title) 0.02f else 0.01f
         t.setLineSpacing(dpf(ctx, 2f), 1f)
-        // The game's hard black drop shadow.
-        t.setShadowLayer(0.01f, dpf(ctx, 1f), dpf(ctx, 1f), DARK_TEXT)
+        // A tight black shadow (about one real pixel) keeps text readable on stone without blurring it.
+        val shadow = if (title) dpf(ctx, 1f) else maxOf(1f, dpf(ctx, 0.5f))
+        t.setShadowLayer(0.01f, shadow, shadow, DARK_TEXT)
         return t
     }
 

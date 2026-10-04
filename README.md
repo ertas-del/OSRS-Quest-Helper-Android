@@ -4,7 +4,7 @@ A floating quest guide that sits on top of Old School RuneScape on Android. It c
 
 It never reads, hooks or automates the game. You tick each step off yourself, so it works like having the wiki open beside you.
 
-It's dressed like the classic in-game interface: bevelled brown stone panels, a pixel font, orange titles and yellow labels with hard black shadows, a compass with a red north needle, and quest names coloured red, yellow and green like the in-game quest list.
+It's dressed like the classic in-game interface: bevelled brown stone panels, pixel-font titles, orange and yellow text with crisp black shadows (body text uses your phone's own font so it stays easy to read), a compass with a red north needle, and quest names coloured red, yellow and green like the in-game quest list.
 
 ---
 
