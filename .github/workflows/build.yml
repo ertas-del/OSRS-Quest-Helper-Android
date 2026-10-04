@@ -160,14 +160,13 @@ jobs:
           cat > "$RUNNER_TEMP/notes.md" <<NOTES
           $SUBJECT
 
-          Download **Breadcrumbs.apk** below and open it on your phone. $KEY (Breadcrumbs.aab is the Google Play upload file; it can't be installed directly.)
+          Download **Breadcrumbs.apk** below and open it on your phone. $KEY
 
           Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.
           NOTES
           sed -i 's/^          //' "$RUNNER_TEMP/notes.md"
-          ASSETS=("$RUNNER_TEMP/Breadcrumbs.apk")
-          [ -f "$RUNNER_TEMP/Breadcrumbs.aab" ] && ASSETS+=("$RUNNER_TEMP/Breadcrumbs.aab")
-          gh release create "v$VERSION" "${ASSETS[@]}" \
+          # Public releases carry only the APK. The Play bundle stays in the run's artifacts.
+          gh release create "v$VERSION" "$RUNNER_TEMP/Breadcrumbs.apk" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
             --title "Breadcrumbs $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
           # The old single "latest" release from earlier builds.
