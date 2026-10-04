@@ -72,7 +72,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
         with:
-          gradle-version: 8.9
+          gradle-version: 8.11.1
 
       # The private release key lives encrypted in signing/release.jks.enc. The RELEASE_PASSWORD
       # secret (Settings > Secrets and variables > Actions) unlocks it. Without the secret the
@@ -105,8 +105,10 @@ jobs:
         run: |
           set -o pipefail
           if [ "$SIGNED" = "true" ]; then
-            gradle assembleRelease --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
+            # The APK for direct download, and the app bundle (.aab) Google Play wants uploaded.
+            gradle assembleRelease bundleRelease --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
             cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/Breadcrumbs.apk"
+            cp app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/Breadcrumbs.aab"
           else
             gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
             cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/Breadcrumbs.apk"
@@ -134,6 +136,13 @@ jobs:
           name: Breadcrumbs-apk
           path: ${{ runner.temp }}/Breadcrumbs.apk
 
+      - name: Upload Play Store bundle as a workflow artifact
+        if: steps.signing.outputs.signed == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: Breadcrumbs-play-bundle
+          path: ${{ runner.temp }}/Breadcrumbs.aab
+
       # Each build on main becomes a numbered release (v0.2.<run>) marked "Latest", so
       # .../releases/latest/download/Breadcrumbs.apk always points at the newest APK and
       # update checkers such as Obtainium see a real version number. Only the newest 10 are kept.
@@ -151,12 +160,14 @@ jobs:
           cat > "$RUNNER_TEMP/notes.md" <<NOTES
           $SUBJECT
 
-          Download **Breadcrumbs.apk** below and open it on your phone. $KEY
+          Download **Breadcrumbs.apk** below and open it on your phone. $KEY (Breadcrumbs.aab is the Google Play upload file; it can't be installed directly.)
 
           Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.
           NOTES
           sed -i 's/^          //' "$RUNNER_TEMP/notes.md"
-          gh release create "v$VERSION" "$RUNNER_TEMP/Breadcrumbs.apk" \
+          ASSETS=("$RUNNER_TEMP/Breadcrumbs.apk")
+          [ -f "$RUNNER_TEMP/Breadcrumbs.aab" ] && ASSETS+=("$RUNNER_TEMP/Breadcrumbs.aab")
+          gh release create "v$VERSION" "${ASSETS[@]}" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
             --title "Breadcrumbs $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
           # The old single "latest" release from earlier builds.

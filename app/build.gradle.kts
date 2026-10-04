@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.questoverlay"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.questoverlay"
         minSdk = 30
-        targetSdk = 35
+        targetSdk = 36
         // Every cloud build gets a higher number, so a new APK always installs over the old one.
         val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
         versionCode = run
@@ -61,7 +61,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }

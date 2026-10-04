@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Breadcrumbs launcher icon: a trail of crumbs leading to a flag. Source: docs/brand/icon.svg -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- crumbs -->
+    <path android:fillColor="#F2C07A" android:strokeColor="#5E3A12" android:strokeWidth="1.8" android:strokeLineJoin="round"
+        android:pathData="M29.5,74.5 L33,71.2 L37.6,72.6 L37,77.4 L32.2,79.2 Z" />
+    <path android:fillColor="#F2C07A" android:strokeColor="#5E3A12" android:strokeWidth="1.8" android:strokeLineJoin="round"
+        android:pathData="M38.2,66.4 L42.6,62.6 L47.8,64.6 L47.2,70.2 L41.4,72 Z" />
+    <path android:fillColor="#F2C07A" android:strokeColor="#5E3A12" android:strokeWidth="1.8" android:strokeLineJoin="round"
+        android:pathData="M47.6,60.2 L53.4,56.6 L59.4,59.6 L58.4,66 L51.6,67.8 L47.2,64.6 Z" />
+    <path android:fillColor="#FFE2A8" android:pathData="M31.6,73.6 L33.4,72.4 L35.2,73.2 L33.2,74.6 Z" />
+    <path android:fillColor="#FFE2A8" android:pathData="M40.6,65.4 L42.8,64 L45,65 L42.6,66.6 Z" />
+    <path android:fillColor="#FFE2A8" android:pathData="M50.4,60.4 L53.4,58.8 L56.2,60.2 L53,62.2 Z" />
+    <!-- flag shadow, pole and flag -->
+    <path android:fillColor="#19140F" android:fillAlpha="0.7"
+        android:pathData="M55.5,67 a7.5,2.4 0 1,0 15,0 a7.5,2.4 0 1,0 -15,0 Z" />
+    <path android:strokeColor="#19140F" android:strokeWidth="5.6" android:strokeLineCap="round"
+        android:pathData="M63,66.5 L63,26" />
+    <path android:strokeColor="#D8CCB0" android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M63,66.5 L63,26" />
+    <path android:fillColor="#FF981F" android:strokeColor="#19140F" android:strokeWidth="2" android:strokeLineJoin="round"
+        android:pathData="M64.5,25.5 L82,34.5 L64.5,43.5 Z" />
+    <path android:fillColor="#FFD98F" android:pathData="M65.6,28 L73.5,32.2 L65.6,36 Z" />
+</vector>
