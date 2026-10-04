@@ -14,6 +14,7 @@ import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.TypedValue
+import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -40,6 +41,8 @@ class MainActivity : Activity() {
     private lateinit var travel: TravelStore
     private lateinit var content: LinearLayout
     private lateinit var listContainer: LinearLayout
+    private lateinit var listBox: ScrollView
+    private lateinit var countLabel: TextView
     private var quests: List<Quest> = emptyList()
     private var query = ""
     private var filter = Filter.ALL
@@ -94,6 +97,8 @@ class MainActivity : Activity() {
     // ---------------------------------------------------------------- screen
 
     private fun refresh() {
+        // Rebuilding (after Mark done, Reset, Start) keeps your place in the quest list.
+        val keepListScroll = if (::listBox.isInitialized) listBox.scrollY else 0
         content.removeAllViews()
         val pad = Ui.dp(this, 16)
         content.setPadding(pad, pad, pad, pad)
@@ -120,17 +125,43 @@ class MainActivity : Activity() {
             content.addView(spaced(Ui.button(this, "Stop overlay", false) { stopOverlay() }, 8))
         }
 
-        val heading = Ui.text(this, "Quests", 18f, Ui.TEXT, bold = true)
-        heading.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 6))
-        content.addView(heading)
+        val headingRow = LinearLayout(this)
+        headingRow.orientation = LinearLayout.HORIZONTAL
+        headingRow.gravity = Gravity.BOTTOM
+        headingRow.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 6))
+        headingRow.addView(
+            Ui.text(this, "Quests", 18f, Ui.TEXT, bold = true),
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        )
+        countLabel = Ui.text(this, "", 12f, Ui.MUTED)
+        headingRow.addView(countLabel)
+        content.addView(headingRow)
 
         content.addView(searchBox())
         content.addView(filterRow())
 
+        // The quest list scrolls inside its own box, so the page doesn't turn into one long scroll.
+        // Reaching the top or bottom of the box hands the scroll back to the page (nested scrolling).
         listContainer = LinearLayout(this)
         listContainer.orientation = LinearLayout.VERTICAL
-        content.addView(listContainer)
+        listBox = MaxHeightScrollView(this, (resources.displayMetrics.heightPixels * 0.62f).toInt())
+        listBox.isNestedScrollingEnabled = true
+        listBox.isScrollbarFadingEnabled = false
+        listBox.scrollBarSize = Ui.dp(this, 4)
+        listBox.verticalScrollbarThumbDrawable = ColorDrawable(Ui.GOLD)
+        listBox.verticalScrollbarTrackDrawable = ColorDrawable(0x33000000)
+        listBox.background = BevelDrawable(this, 0xFF231D16.toInt(), Ui.STONE_DARK, Ui.STONE_LIGHT, Ui.STROKE, raised = false)
+        val bp = Ui.dp(this, 6)
+        listBox.setPadding(bp, 0, bp + Ui.dp(this, 4), bp)
+        listBox.addView(
+            listContainer,
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        )
+        val boxLp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        boxLp.topMargin = Ui.dp(this, 8)
+        content.addView(listBox, boxLp)
         refreshList()
+        if (keepListScroll > 0) listBox.post { listBox.scrollTo(0, keepListScroll) }
 
         val credit = Ui.text(
             this,
@@ -166,7 +197,7 @@ class MainActivity : Activity() {
                 val q = s?.toString() ?: ""
                 if (q != query) {
                     query = q
-                    applyFilter()
+                    filterChanged()
                 }
             }
         })
@@ -185,7 +216,7 @@ class MainActivity : Activity() {
             chip.setOnClickListener {
                 filter = f
                 styleChips(chips)
-                applyFilter()
+                filterChanged()
             }
             chips.add(chip)
             val clp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -252,13 +283,22 @@ class MainActivity : Activity() {
     }
 
     private fun applyFilter() {
-        var any = false
+        var shown = 0
         for ((q, card) in cards) {
             val show = matches(q)
             card.visibility = if (show) View.VISIBLE else View.GONE
-            if (show) any = true
+            if (show) shown++
         }
-        if (::noMatches.isInitialized) noMatches.visibility = if (any) View.GONE else View.VISIBLE
+        if (::noMatches.isInitialized) noMatches.visibility = if (shown > 0) View.GONE else View.VISIBLE
+        if (::countLabel.isInitialized) {
+            countLabel.text = if (shown == cards.size) "${cards.size} quests" else "$shown of ${cards.size}"
+        }
+    }
+
+    /** A new search or filter starts at the top of the list box. */
+    private fun filterChanged() {
+        applyFilter()
+        if (::listBox.isInitialized) listBox.scrollTo(0, 0)
     }
 
     private fun spaced(view: View, topDp: Int): View {
