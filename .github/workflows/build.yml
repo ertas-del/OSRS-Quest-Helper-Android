@@ -65,7 +65,10 @@ jobs:
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
 
       # Direct-download link: Releases page -> "Latest build" -> app-debug.apk
+      # Needs Settings > Actions > General > Workflow permissions > "Read and write".
+      # If that is off, this step is skipped over and the APK is still in the run's Artifacts.
       - name: Publish APK to the "latest" release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
