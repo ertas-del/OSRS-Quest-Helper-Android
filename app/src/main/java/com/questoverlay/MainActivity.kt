@@ -105,8 +105,11 @@ class MainActivity : Activity() {
             13f,
             Ui.TAN
         )
-        intro.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 14))
+        intro.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 4))
         content.addView(intro)
+        val fanMade = Ui.text(this, JAGEX_DISCLAIMER, 11f, Ui.MUTED)
+        fanMade.setPadding(0, 0, 0, Ui.dp(this, 14))
+        content.addView(fanMade)
 
         content.addView(permissionCard())
         content.addView(opacityCard())
@@ -132,7 +135,7 @@ class MainActivity : Activity() {
         val credit = Ui.text(
             this,
             "Quest steps come from the RuneLite Quest Helper plugin (BSD 2-Clause, " +
-                "Copyright (c) 2020 Zoinkwiz). Map by mejrs. Not affiliated with Jagex. " +
+                "Copyright (c) 2020 Zoinkwiz). Travel data from the Shortest Path plugin (BSD 2-Clause). Map by mejrs. " +
                 "Compass bearings are worked out from map tiles, so trust your minimap if they disagree.",
             11f,
             Ui.MUTED
@@ -468,6 +471,10 @@ class MainActivity : Activity() {
         val NON_ALNUM = Regex("[^a-z0-9 ]")
         val SPACES = Regex("\\s+")
         const val REQUEST_NOTIFICATIONS = 100
+        /** Wording required by Jagex's Fan Content Policy. */
+        const val JAGEX_DISCLAIMER =
+            "Created using intellectual property belonging to Jagex Limited under the terms of " +
+                "Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex."
         const val OSRS_PACKAGE = "com.jagex.oldscape.android"
     }
 }

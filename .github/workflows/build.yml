@@ -2,6 +2,9 @@ name: Build APK
 
 on:
   push:
+    # The download page in docs/ is published by GitHub Pages; editing it doesn't need a new APK.
+    paths-ignore:
+      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -71,11 +74,44 @@ jobs:
         with:
           gradle-version: 8.9
 
-      - name: Build debug APK
+      # The private release key lives encrypted in signing/release.jks.enc. The RELEASE_PASSWORD
+      # secret (Settings > Secrets and variables > Actions) unlocks it. Without the secret the
+      # build falls back to the shared debug key, exactly like before.
+      - name: Prepare release signing
+        id: signing
+        env:
+          RELEASE_PASSWORD: ${{ secrets.RELEASE_PASSWORD }}
+        run: |
+          ENC="$PROJECT_DIR/signing/release.jks.enc"
+          if [ -n "$RELEASE_PASSWORD" ] && [ -f "$ENC" ]; then
+            if openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "$ENC" \
+                 -out "$RUNNER_TEMP/release.jks" -pass env:RELEASE_PASSWORD 2>/dev/null; then
+              echo "RELEASE_STORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+              echo "signed=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::Signing with the private release key"
+              exit 0
+            fi
+            echo "::warning::RELEASE_PASSWORD didn't unlock signing/release.jks.enc; building with the debug key instead"
+          else
+            echo "::warning::No RELEASE_PASSWORD secret yet; building with the shared debug key"
+          fi
+          echo "signed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
         working-directory: ${{ env.PROJECT_DIR }}
+        env:
+          RELEASE_PASSWORD: ${{ secrets.RELEASE_PASSWORD }}
+          SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
           set -o pipefail
-          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
+          if [ "$SIGNED" = "true" ]; then
+            gradle assembleRelease --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
+            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/QuestOverlay.apk"
+          else
+            gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/QuestOverlay.apk"
+          fi
+          rm -f "$RUNNER_TEMP/release.jks"
 
       # Copy the important lines of a failed build into annotations, so they show on the
       # run's summary page (and can be read with `gh run view`) without opening the full log.
@@ -95,20 +131,36 @@ jobs:
       - name: Upload APK as a workflow artifact
         uses: actions/upload-artifact@v6
         with:
-          name: QuestOverlay-debug-apk
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          name: QuestOverlay-apk
+          path: ${{ runner.temp }}/QuestOverlay.apk
 
-      # Direct-download link: Releases page -> "Latest build" -> app-debug.apk
+      # Each build on main becomes a numbered release (v0.2.<run>) marked "Latest", so
+      # .../releases/latest/download/QuestOverlay.apk always points at the newest APK and
+      # update checkers such as Obtainium see a real version number. Only the newest 10 are kept.
       # Needs Settings > Actions > General > Workflow permissions > "Read and write".
-      # If that is off, this step is skipped over and the APK is still in the run's Artifacts.
-      - name: Publish APK to the "latest" release
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
-          gh release delete latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
-          gh release create latest "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "Latest build" \
-            --notes "Debug APK built from commit $GITHUB_SHA"
+          VERSION="0.2.$GITHUB_RUN_NUMBER"
+          SUBJECT=$(git log -1 --pretty=%s)
+          if [ "$SIGNED" = "true" ]; then KEY="Signed with the Quest Overlay release key."; else KEY="Signed with the shared debug key."; fi
+          cat > "$RUNNER_TEMP/notes.md" <<NOTES
+          $SUBJECT
+
+          Download **QuestOverlay.apk** below and open it on your phone. $KEY
+
+          Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.
+          NOTES
+          sed -i 's/^          //' "$RUNNER_TEMP/notes.md"
+          gh release create "v$VERSION" "$RUNNER_TEMP/QuestOverlay.apk" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
+            --title "Quest Overlay $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          # The old single "latest" release from earlier builds.
+          gh release delete latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt \
+            --jq 'map(select(.tagName | startswith("v0."))) | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
+            | while read -r old; do gh release delete "$old" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true; done

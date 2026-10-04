@@ -4,6 +4,10 @@ A floating quest guide that sits on top of Old School RuneScape on Android. It c
 
 It never reads, hooks or automates the game. You tick each step off yourself, so it works like having the wiki open beside you.
 
+**[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/QuestOverlay.apk)** · [Website and install guide](https://ertas-del.github.io/OSRS-Quest-Helper-Android/) · free, no ads, no account
+
+> Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.
+
 It's dressed like the classic in-game interface: bevelled brown stone panels, pixel-font titles, orange and yellow text with crisp black shadows (body text uses your phone's own font so it stays easy to read), a compass with a red north needle, and quest names coloured red, yellow and green like the in-game quest list.
 
 ---
@@ -110,7 +114,15 @@ puzzle in the quest is on the Puzzle tab.
 
 ---
 
-## Install it from your phone (no PC needed)
+## Install
+
+1. On your Android phone, tap **[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/QuestOverlay.apk)**.
+2. Open the download and allow installs from your browser when Android asks. Play Protect may warn you because the app isn't from the Play Store; choose **Install anyway**.
+3. To get updates automatically, add this repo's URL to [Obtainium](https://obtainium.imranr.dev/), a free app that installs new GitHub releases for you.
+
+Every release is listed on the [Releases page](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases).
+
+## Build your own copy (no PC needed)
 
 GitHub builds the app for you for free.
 
@@ -122,10 +134,13 @@ GitHub builds the app for you for free.
    Paste in the contents of `build.yml`, then tap **Commit**.
 4. **Let it publish releases (one time).** Go to **Settings → Actions → General → Workflow permissions**, choose **Read and write permissions**, and tap **Save**.
 5. **Wait a few minutes.** The **Actions** tab shows the build. A green tick means it worked.
-6. **Download the APK.** On the repo's main page, tap **Releases → Latest build → app-debug.apk**.
-   *Backup:* open the finished run in **Actions** and download **QuestOverlay-debug-apk** under **Artifacts**. It's a zip with the APK inside.
+6. **Download the APK.** On the repo's main page, tap **Releases**, then the newest release marked **Latest**, then **QuestOverlay.apk**.
+   *Backup:* open the finished run in **Actions** and download **QuestOverlay-apk** under **Artifacts**. It's a zip with the APK inside.
 7. **Install it.** Open the download and allow installs from Chrome when Android asks.
    Play Protect may warn you because the app isn't from the Play Store. Choose **Install anyway**.
+
+### Release signing
+Builds are signed with a private release key, kept encrypted in `signing/release.jks.enc`. The build unlocks it with a repository secret named `RELEASE_PASSWORD` (**Settings → Secrets and variables → Actions**). Without that secret, a copy of the repo still builds, signed with the shared debug key in `app/debug.keystore`. Android only installs an update over an app signed with the same key.
 
 ### Updating
 Upload the new `questoverlay.zip` over the old one, or edit any file in the repo. Each change starts a new build. To refresh the quest data without changing anything, open **Actions → Build APK → Run workflow**.
@@ -217,7 +232,9 @@ tools/convert_questhelper.py      Quest Helper → quests.json converter
 tools/convert_transports.py       Shortest Path → transports.tsv, places.tsv, collision-map.zip
 tools/build_puzzles.py            puzzle answers and solver settings → puzzles.json
 app/src/main/assets/transports.tsv, collision-map.zip, places.tsv   travel data
-.github/workflows/build.yml       cloud build: refresh quests and travel data, build APK, publish release
+.github/workflows/build.yml       cloud build: refresh quests and travel data, build and sign the APK, publish a release
+signing/release.jks.enc           the release key, encrypted (unlocked by the RELEASE_PASSWORD secret)
+docs/                             the download page and privacy policy (GitHub Pages)
 ```
 
 ## Credits

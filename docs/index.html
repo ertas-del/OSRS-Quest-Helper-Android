@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quest Overlay for OSRS Mobile</title>
+<meta name="description" content="A free floating quest guide for Old School RuneScape on Android. Every quest, one step at a time, with routes and item lists. It never touches the game.">
+<meta name="theme-color" content="#1c1813">
+<meta property="og:title" content="Quest Overlay for OSRS Mobile">
+<meta property="og:description" content="A free floating quest guide that sits on top of Old School RuneScape on Android.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/PixelifySans.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+  /* The same pixel font the app uses (SIL Open Font License, see fonts/OFL.txt). */
+  @font-face {
+    font-family: "Pixelify Sans";
+    src: url("fonts/PixelifySans.ttf") format("truetype");
+    font-weight: 400 700;
+    font-display: swap;
+  }
+  :root {
+    color-scheme: dark;
+    --ground: #1c1813;
+    --panel: #3e3529;
+    --panel-deep: #2b241b;
+    --stone-light: #6a5c48;
+    --stone-dark: #19140f;
+    --edge: #000;
+    --orange: #ff981f;
+    --yellow: #ffff00;
+    --green: #00e000;
+    --text: #f4ecd8;
+    --muted: #c9bc9f;
+    --pixel: "Pixelify Sans", ui-monospace, monospace;
+    --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font: 17px/1.55 var(--body);
+  }
+  a { color: var(--orange); text-underline-offset: 3px; }
+  a:hover { color: var(--yellow); }
+  :focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+
+  /* The classic interface bevel: black outline, light top-left, dark bottom-right. */
+  .stone {
+    background: var(--panel);
+    border: 2px solid var(--edge);
+    box-shadow: inset 2px 2px 0 var(--stone-light), inset -2px -2px 0 var(--stone-dark);
+  }
+  .shadow-text { text-shadow: 1px 1px 0 #000; }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    padding: 48px 0 56px;
+    align-items: center;
+  }
+  @media (min-width: 860px) {
+    .hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); padding: 72px 0 80px; }
+  }
+  h1 {
+    font: 700 clamp(44px, 9vw, 76px)/0.95 var(--pixel);
+    color: var(--orange);
+    margin: 0 0 18px;
+    text-shadow: 3px 3px 0 #000;
+    letter-spacing: 0.5px;
+  }
+  .lede { font-size: 20px; max-width: 34ch; margin: 0 0 28px; }
+  .download {
+    display: inline-block;
+    padding: 16px 26px 15px;
+    font: 700 22px/1 var(--pixel);
+    color: var(--yellow);
+    text-decoration: none;
+    text-shadow: 1px 1px 0 #000;
+    background: #4a3f30;
+  }
+  .download:hover { color: var(--yellow); background: #54483a; }
+  .download:active {
+    box-shadow: inset 2px 2px 0 var(--stone-dark), inset -2px -2px 0 var(--stone-light);
+    background: #382f24;
+  }
+  .release { color: var(--muted); font-size: 15px; margin: 12px 0 0; min-height: 1.55em; }
+  .android-only { color: var(--muted); font-size: 15px; margin: 4px 0 0; }
+
+  /* ---------------------------------------------------------------- the live overlay demo */
+  .demo { position: relative; }
+  .scene {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 72px 12px 48px;
+    border: 2px solid var(--edge);
+    min-height: 470px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 70% 15%, rgba(255, 220, 140, 0.18), transparent 55%),
+      linear-gradient(180deg, #3d5a2a 0%, #4f6e33 46%, #5f7a3a 47%, #556f35 100%);
+  }
+  /* A few tiles of path and the castle wall, just enough to read as "the game". */
+  .scene::before {
+    content: "";
+    position: absolute; inset: auto -10% 0 -10%; height: 46%;
+    background: repeating-linear-gradient(90deg, #8a7a5c 0 34px, #7f6f52 34px 68px);
+    transform: perspective(400px) rotateX(55deg);
+    transform-origin: bottom;
+    opacity: 0.9;
+  }
+  .scene::after {
+    content: "";
+    position: absolute; left: 0; right: 0; top: 0; height: 30%;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 46px, rgba(0,0,0,0.25) 46px 48px),
+      linear-gradient(180deg, #77736b, #5f5b54);
+    border-bottom: 3px solid #3c3934;
+  }
+  .card {
+    position: relative;
+    z-index: 1;
+    width: min(320px, 100%);
+    padding: 12px 12px 14px;
+    opacity: 0.96;
+  }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .card-quest { font: 700 17px/1.1 var(--pixel); color: var(--orange); }
+  .card-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .bar { height: 6px; background: var(--stone-dark); margin: 8px 0 10px; border: 1px solid #000; }
+  .bar > i { display: block; height: 100%; background: var(--green); width: 0; transition: width 240ms ease; }
+  .section-name { font-size: 13px; color: var(--yellow); min-height: 1.4em; }
+  .step-row { display: flex; gap: 12px; align-items: flex-start; margin-top: 4px; }
+  .compass {
+    flex: none;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: radial-gradient(circle, #4a3f30 55%, #2b241b 56%);
+    border: 2px solid #000;
+    position: relative;
+    display: grid; place-items: center;
+    font: 700 13px/1 var(--pixel); color: var(--yellow);
+  }
+  .needle {
+    position: absolute; left: 50%; top: 50%;
+    width: 6px; height: 40px; margin: -20px 0 0 -3px;
+    background: linear-gradient(180deg, #ff2b2b 50%, #e9e2cf 50%);
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    transition: transform 300ms ease;
+  }
+  .step-text { font-size: 16px; line-height: 1.4; }
+  .dist { font-size: 13px; color: var(--muted); }
+  .extras { margin-top: 8px; font-size: 14px; }
+  .extras b { color: var(--orange); font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .chip { font-size: 13px; padding: 2px 7px; background: var(--panel-deep); border: 1px solid #000; }
+  .chat .chip { color: var(--yellow); }
+  .card-buttons { display: grid; grid-template-columns: 48px 1fr; gap: 6px; margin-top: 12px; }
+  .card-buttons button {
+    font: 700 18px/1 var(--pixel);
+    padding: 11px 0 10px;
+    cursor: pointer;
+    background: #4a3f30;
+    color: var(--yellow);
+    text-shadow: 1px 1px 0 #000;
+  }
+  .card-buttons button:active {
+    box-shadow: inset 2px 2px 0 var(--stone-dark), inset -2px -2px 0 var(--stone-light);
+  }
+  .card-buttons button:disabled { color: var(--muted); cursor: default; }
+  .demo-caption { color: var(--muted); font-size: 15px; margin: 10px 0 0; }
+
+  /* ---------------------------------------------------------------- sections */
+  section { padding: 40px 0; border-top: 2px solid #000; box-shadow: 0 -2px 0 #2b241b; }
+  h2 {
+    font: 700 30px/1.1 var(--pixel);
+    color: var(--orange);
+    margin: 0 0 18px;
+    text-shadow: 2px 2px 0 #000;
+  }
+  .prose { max-width: 66ch; }
+  .prose p { margin: 0 0 14px; }
+
+  .install { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: 70ch; }
+  .install li { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; }
+  .install .n {
+    width: 40px; height: 40px; display: grid; place-items: center;
+    font: 700 20px/1 var(--pixel); color: var(--yellow);
+  }
+  .install strong { color: var(--text); }
+  .install p { margin: 6px 0 0; }
+
+  .features { display: grid; gap: 28px 40px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 760px) { .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .features h3 { font: 700 20px/1.2 var(--pixel); color: var(--yellow); margin: 0 0 6px; text-shadow: 1px 1px 0 #000; }
+  .features p { margin: 0; color: var(--text); }
+  .features .eg { color: var(--muted); font-size: 15px; margin-top: 6px; }
+
+  .safe { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 760px) { .safe { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .safe ul { margin: 0; padding-left: 1.1em; }
+  .safe li { margin-bottom: 6px; }
+  .safe h3 { font: 700 18px/1.2 var(--pixel); margin: 0 0 8px; }
+  .does h3 { color: var(--green); }
+  .doesnt h3 { color: #ff6b5e; }
+
+  footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; border-top: 2px solid #000; }
+  footer p { margin: 0 0 10px; max-width: 80ch; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .needle, .bar > i { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <h1>Quest Overlay</h1>
+      <p class="lede">A quest guide that floats on top of Old School RuneScape on your Android phone. Every quest, one step at a time, with the route there and the items to bring.</p>
+      <a class="download stone" id="download" href="https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/QuestOverlay.apk">Download APK</a>
+      <p class="release" id="release">Free. No ads, no account.</p>
+      <p class="android-only">Android 11 or newer. iPhones don't let apps draw over games.</p>
+    </div>
+
+    <div class="demo">
+      <div class="scene">
+        <div class="card stone" id="card" role="group" aria-label="Overlay demo: Cook's Assistant">
+          <div class="card-head">
+            <span class="card-quest shadow-text">Cook's Assistant</span>
+            <span class="card-count" id="count"></span>
+          </div>
+          <div class="bar"><i id="bar"></i></div>
+          <div class="section-name shadow-text" id="section"></div>
+          <div class="step-row">
+            <div class="compass" id="compass"><span class="needle" id="needle"></span><span id="compassLabel"></span></div>
+            <div>
+              <div class="step-text shadow-text" id="text" aria-live="polite"></div>
+              <div class="dist" id="dist"></div>
+            </div>
+          </div>
+          <div class="extras" id="extras"></div>
+          <div class="card-buttons">
+            <button class="stone" id="back" type="button" aria-label="Previous step">‹</button>
+            <button class="stone" id="done" type="button">Done ✓</button>
+          </div>
+        </div>
+      </div>
+      <p class="demo-caption">Try it: this is the real first quest from the app. Tap Done to tick steps off.</p>
+    </div>
+  </div>
+
+  <section id="install">
+    <h2>Install in three steps</h2>
+    <ol class="install">
+      <li><span class="n stone">1</span><div><strong>Download the APK on your phone.</strong><p>Tap Download APK above. Your browser may ask if you want to keep the file; say yes.</p></div></li>
+      <li><span class="n stone">2</span><div><strong>Open it and allow the install.</strong><p>Android asks you to allow installs from your browser the first time. Play Protect may warn that the app isn't from the Play Store; choose Install anyway.</p></div></li>
+      <li><span class="n stone">3</span><div><strong>Let it draw over other apps.</strong><p>Open Quest Overlay, tap Grant permission, and switch on Allow display over other apps. Then pick a quest, tap Start overlay, and open the game.</p></div></li>
+    </ol>
+    <p class="prose" style="margin-top:22px">Want updates without coming back here? Add <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android">the project's GitHub page</a> to <a href="https://obtainium.imranr.dev/">Obtainium</a>, a free app that installs new releases for you.</p>
+  </section>
+
+  <section>
+    <h2>What it does</h2>
+    <div class="features">
+      <div>
+        <h3>Every quest and miniquest</h3>
+        <p>Over 200 quests, step by step, kept in sync with the RuneLite Quest Helper plugin. Your place is saved, even if you close the game.</p>
+      </div>
+      <div>
+        <h3>The fastest way there</h3>
+        <p>A route planner on your phone picks teleports, fairy rings, spirit trees, gliders, boats and shortcuts you can actually use.</p>
+        <p class="eg">Break a Teleport to House tablet, then the Kharyrll portal in your house.</p>
+      </div>
+      <div>
+        <h3>Your house counts</h3>
+        <p>Tell it about your portal nexus, jewellery box, mounted glory or garden fairy ring and routes go through your POH.</p>
+      </div>
+      <div>
+        <h3>Puzzle help</h3>
+        <p>Solvers and answers for quest puzzles, worked with taps only, so you never need the keyboard over the game.</p>
+      </div>
+      <div>
+        <h3>Items and chat options</h3>
+        <p>What to bring for each step, a full checklist for the quest, and the dialogue options to pick.</p>
+      </div>
+      <div>
+        <h3>Knows your account</h3>
+        <p>Load your levels from the official hiscores and your finished quests from WikiSync, so routes skip what you can't use yet.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why it can't get you banned</h2>
+    <div class="safe">
+      <div class="does">
+        <h3>It does</h3>
+        <ul>
+          <li>Draw a card on top of the screen, like any chat-head app</li>
+          <li>Wait for you to tap Done before moving on</li>
+          <li>Look up your levels on the public hiscores, only when you ask</li>
+        </ul>
+      </div>
+      <div class="doesnt">
+        <h3>It never</h3>
+        <ul>
+          <li>Reads the game, its memory or its network traffic</li>
+          <li>Taps, swipes or types for you</li>
+          <li>Asks for your password or logs in to anything</li>
+        </ul>
+      </div>
+    </div>
+    <p class="prose" style="margin-top:20px">It works like having the wiki open in another window. The code is open on <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android">GitHub</a> for anyone to check.</p>
+  </section>
+
+  <footer>
+    <p>Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.</p>
+    <p>Quest steps from the RuneLite Quest Helper plugin by Zoinkwiz and travel data from the Shortest Path plugin by Skretzo, both BSD 2-Clause. Not affiliated with RuneLite.</p>
+    <p><a href="privacy.html">Privacy</a> &nbsp; <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android/issues">Report a problem</a> &nbsp; <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases">All releases</a></p>
+  </footer>
+</main>
+
+<script>
+  // The real first steps of Cook's Assistant, as the app shows them.
+  const STEPS = [
+    { s: "Starting off", t: "Purchase a bucket from the Lumbridge General Store.", dir: null, bring: ["3× Coins"] },
+    { s: "", t: "Purchase a pot from the Lumbridge General Store.", dir: "HERE" },
+    { s: "Getting the Egg", t: "Grab an egg from the farm north of Lumbridge.", dir: 315, dist: 61 },
+    { s: "Getting the Flour", t: "Pick some wheat north of Lumbridge.", dir: 270, dist: 16, bring: ["Pot"] },
+    { s: "", t: "Climb up the ladder in the Mill north of Lumbridge to the top floor.", dir: "UP" },
+    { s: "", t: "Fill the hopper with your grain.", dir: "HERE" },
+    { s: "", t: "Operate the hopper controls.", dir: "HERE" },
+    { s: "", t: "Climb down the ladder in the Mill to the ground floor.", dir: "DOWN" },
+    { s: "", t: "Collect the flour in the bin.", dir: "HERE" },
+    { s: "Getting the Milk", t: "Milk the dairy cow north of Lumbridge.", dir: 45, dist: 13, bring: ["Bucket"] },
+    { s: "Finishing up", t: "Give the Cook in Lumbridge Castle's kitchen the required items to finish the quest.", dir: 180, dist: 108,
+      bring: ["Egg", "Pot of flour", "Bucket of milk"], chat: ["What's wrong?", "Can I help?", "Yes."] },
+  ];
+  let i = 0;
+  const $ = (id) => document.getElementById(id);
+  let lastSection = STEPS[0].s;
+
+  function chips(label, items, cls) {
+    const wrap = document.createElement("div");
+    wrap.className = cls || "";
+    const b = document.createElement("b");
+    b.textContent = label;
+    wrap.appendChild(b);
+    const row = document.createElement("div");
+    row.className = "chips";
+    for (const it of items) {
+      const c = document.createElement("span");
+      c.className = "chip";
+      c.textContent = it;
+      row.appendChild(c);
+    }
+    wrap.appendChild(row);
+    return wrap;
+  }
+
+  function render() {
+    const finished = i >= STEPS.length;
+    const st = STEPS[Math.min(i, STEPS.length - 1)];
+    for (let k = i; k >= 0; k--) { if (STEPS[Math.min(k, STEPS.length - 1)].s) { lastSection = STEPS[Math.min(k, STEPS.length - 1)].s; break; } }
+    $("count").textContent = finished ? "Quest complete" : `Step ${i + 1} of ${STEPS.length}`;
+    $("bar").style.width = `${(Math.min(i, STEPS.length) / STEPS.length) * 100}%`;
+    $("section").textContent = finished ? "Well done!" : lastSection;
+    $("text").textContent = finished ? "Cook's Assistant complete. 1 quest point." : st.t;
+    $("dist").textContent = !finished && st.dist ? `${st.dist} tiles` : "";
+    const needle = $("needle"), label = $("compassLabel");
+    if (finished || st.dir === null || typeof st.dir === "string") {
+      needle.style.display = "none";
+      label.textContent = finished ? "✓" : st.dir === "UP" ? "▲" : st.dir === "DOWN" ? "▼" : st.dir === "HERE" ? "here" : "•";
+    } else {
+      needle.style.display = "block";
+      needle.style.transform = `rotate(${st.dir}deg)`;
+      label.textContent = "";
+    }
+    const ex = $("extras");
+    ex.replaceChildren();
+    if (!finished && st.bring) ex.appendChild(chips("Bring", st.bring));
+    if (!finished && st.chat) ex.appendChild(chips("Say", st.chat, "chat"));
+    $("back").disabled = i === 0;
+    $("done").textContent = finished ? "Start again" : "Done ✓";
+  }
+  $("done").addEventListener("click", () => { i = i >= STEPS.length ? 0 : i + 1; render(); });
+  $("back").addEventListener("click", () => { if (i > 0) { i--; render(); } });
+  render();
+
+  // Show the current version and size, if GitHub answers.
+  fetch("https://api.github.com/repos/ertas-del/OSRS-Quest-Helper-Android/releases/latest")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((rel) => {
+      if (!rel) return;
+      const apk = (rel.assets || []).find((a) => a.name.endsWith(".apk"));
+      if (apk) $("download").href = apk.browser_download_url;
+      const date = new Date(rel.published_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+      const size = apk ? `${(apk.size / 1048576).toFixed(1)} MB, ` : "";
+      const version = (rel.tag_name || "").replace(/^v/, "");
+      $("release").textContent = `Free. Version ${version}, ${size}updated ${date}.`;
+    })
+    .catch(() => {});
+</script>
+</body>
+</html>
