@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QuestOverlay"
+rootProject.name = "Breadcrumbs"
 include(":app")

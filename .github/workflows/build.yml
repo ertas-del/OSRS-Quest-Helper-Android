@@ -106,10 +106,10 @@ jobs:
           set -o pipefail
           if [ "$SIGNED" = "true" ]; then
             gradle assembleRelease --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
-            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/QuestOverlay.apk"
+            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/Breadcrumbs.apk"
           else
             gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
-            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/QuestOverlay.apk"
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/Breadcrumbs.apk"
           fi
           rm -f "$RUNNER_TEMP/release.jks"
 
@@ -131,11 +131,11 @@ jobs:
       - name: Upload APK as a workflow artifact
         uses: actions/upload-artifact@v6
         with:
-          name: QuestOverlay-apk
-          path: ${{ runner.temp }}/QuestOverlay.apk
+          name: Breadcrumbs-apk
+          path: ${{ runner.temp }}/Breadcrumbs.apk
 
       # Each build on main becomes a numbered release (v0.2.<run>) marked "Latest", so
-      # .../releases/latest/download/QuestOverlay.apk always points at the newest APK and
+      # .../releases/latest/download/Breadcrumbs.apk always points at the newest APK and
       # update checkers such as Obtainium see a real version number. Only the newest 10 are kept.
       # Needs Settings > Actions > General > Workflow permissions > "Read and write".
       - name: Publish release
@@ -147,18 +147,18 @@ jobs:
         run: |
           VERSION="0.2.$GITHUB_RUN_NUMBER"
           SUBJECT=$(git log -1 --pretty=%s)
-          if [ "$SIGNED" = "true" ]; then KEY="Signed with the Quest Overlay release key."; else KEY="Signed with the shared debug key."; fi
+          if [ "$SIGNED" = "true" ]; then KEY="Signed with the Breadcrumbs release key."; else KEY="Signed with the shared debug key."; fi
           cat > "$RUNNER_TEMP/notes.md" <<NOTES
           $SUBJECT
 
-          Download **QuestOverlay.apk** below and open it on your phone. $KEY
+          Download **Breadcrumbs.apk** below and open it on your phone. $KEY
 
           Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.
           NOTES
           sed -i 's/^          //' "$RUNNER_TEMP/notes.md"
-          gh release create "v$VERSION" "$RUNNER_TEMP/QuestOverlay.apk" \
+          gh release create "v$VERSION" "$RUNNER_TEMP/Breadcrumbs.apk" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
-            --title "Quest Overlay $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+            --title "Breadcrumbs $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
           # The old single "latest" release from earlier builds.
           gh release delete latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
           gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt \

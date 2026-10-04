@@ -1,10 +1,10 @@
-# Quest Overlay for OSRS Mobile
+# Breadcrumbs: quest guide for OSRS mobile
 
 A floating quest guide that sits on top of Old School RuneScape on Android. It covers every quest and miniquest in the RuneLite Quest Helper plugin (208 at the time of writing), one step at a time, with a compass, distances, chat options and item checklists.
 
 It never reads, hooks or automates the game. You tick each step off yourself, so it works like having the wiki open beside you.
 
-**[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/QuestOverlay.apk)** · [Website and install guide](https://ertas-del.github.io/OSRS-Quest-Helper-Android/) · free, no ads, no account
+**[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/Breadcrumbs.apk)** · [Website and install guide](https://ertas-del.github.io/OSRS-Quest-Helper-Android/) · free, no ads, no account
 
 > Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.
 
@@ -116,7 +116,7 @@ puzzle in the quest is on the Puzzle tab.
 
 ## Install
 
-1. On your Android phone, tap **[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/QuestOverlay.apk)**.
+1. On your Android phone, tap **[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/Breadcrumbs.apk)**.
 2. Open the download and allow installs from your browser when Android asks. Play Protect may warn you because the app isn't from the Play Store; choose **Install anyway**.
 3. To get updates automatically, add this repo's URL to [Obtainium](https://obtainium.imranr.dev/), a free app that installs new GitHub releases for you.
 
@@ -134,8 +134,8 @@ GitHub builds the app for you for free.
    Paste in the contents of `build.yml`, then tap **Commit**.
 4. **Let it publish releases (one time).** Go to **Settings → Actions → General → Workflow permissions**, choose **Read and write permissions**, and tap **Save**.
 5. **Wait a few minutes.** The **Actions** tab shows the build. A green tick means it worked.
-6. **Download the APK.** On the repo's main page, tap **Releases**, then the newest release marked **Latest**, then **QuestOverlay.apk**.
-   *Backup:* open the finished run in **Actions** and download **QuestOverlay-apk** under **Artifacts**. It's a zip with the APK inside.
+6. **Download the APK.** On the repo's main page, tap **Releases**, then the newest release marked **Latest**, then **Breadcrumbs.apk**.
+   *Backup:* open the finished run in **Actions** and download **Breadcrumbs-apk** under **Artifacts**. It's a zip with the APK inside.
 7. **Install it.** Open the download and allow installs from Chrome when Android asks.
    Play Protect may warn you because the app isn't from the Play Store. Choose **Install anyway**.
 
@@ -149,7 +149,7 @@ Upload the new `questoverlay.zip` over the old one, or edit any file in the repo
 
 ## Using it
 
-1. Open **Quest Overlay** and tap **Grant permission**. Find Quest Overlay in the list and turn on **Allow display over other apps**.
+1. Open **Breadcrumbs** and tap **Grant permission**. Find Breadcrumbs in the list and turn on **Allow display over other apps**.
 2. Allow notifications if asked. The overlay runs as a small notification with a **Stop** button.
 3. Search for a quest and tap **Start overlay**.
 4. Tap **Open Old School RuneScape**.

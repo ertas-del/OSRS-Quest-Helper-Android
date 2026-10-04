@@ -101,7 +101,7 @@ object AccountSync {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 10_000
         c.readTimeout = 15_000
-        c.setRequestProperty("User-Agent", "QuestOverlay/0.2 (Android quest helper)")
+        c.setRequestProperty("User-Agent", "Breadcrumbs/0.2 (Android quest guide for OSRS mobile)")
         try {
             val code = c.responseCode
             val stream = if (code in 200..299) c.inputStream else c.errorStream

@@ -98,7 +98,7 @@ class MainActivity : Activity() {
         val pad = Ui.dp(this, 16)
         content.setPadding(pad, pad, pad, pad)
 
-        content.addView(Ui.text(this, "Quest Overlay", 28f, Ui.GOLD, bold = true))
+        content.addView(Ui.text(this, "Breadcrumbs", 28f, Ui.GOLD, bold = true))
         val intro = Ui.text(
             this,
             "${quests.size} quests and miniquests. It never touches the game: you tick steps off yourself.",

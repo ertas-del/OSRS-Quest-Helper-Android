@@ -99,7 +99,7 @@ class OverlayService : Service() {
         }
 
         if (!Settings.canDrawOverlays(this)) {
-            toast("Allow \"Display over other apps\" for Quest Overlay first.")
+            toast("Allow \"Display over other apps\" for Breadcrumbs first.")
             stopOverlay()
             return START_NOT_STICKY
         }
@@ -139,7 +139,7 @@ class OverlayService : Service() {
     private fun startAsForeground() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Quest overlay", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(CHANNEL_ID, "Quest card", NotificationManager.IMPORTANCE_LOW)
         )
         val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), flags)
@@ -153,7 +153,7 @@ class OverlayService : Service() {
         ).build()
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
-            .setContentTitle("Quest overlay is running")
+            .setContentTitle("Breadcrumbs is running")
             .setContentText("Tap to pick a quest")
             .setContentIntent(open)
             .setOngoing(true)
@@ -312,7 +312,7 @@ class OverlayService : Service() {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             startActivity(i)
         } catch (e: Exception) {
-            toast("Open Quest Overlay from your app list to pick another quest.")
+            toast("Open Breadcrumbs from your app list to pick another quest.")
         }
     }
 
@@ -820,7 +820,7 @@ class OverlayService : Service() {
             startActivity(i)
             setCollapsed(true)
         } catch (e: Exception) {
-            toast("Open Quest Overlay to change travel settings.")
+            toast("Open Breadcrumbs to change travel settings.")
         }
     }
 
