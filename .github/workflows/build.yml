@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Phone-friendly mode: if you uploaded questoverlay.zip to the repo root
       # instead of the loose files, unpack it and build that.
@@ -33,14 +33,31 @@ jobs:
           git clone --depth 1 https://github.com/Zoinkwiz/quest-helper /tmp/qh
           python3 "$PROJECT_DIR/tools/convert_questhelper.py" /tmp/qh /tmp/quests.json
           NEW=$(python3 -c "import json;print(len(json.load(open('/tmp/quests.json'))['quests']))")
-          echo "Converted $NEW quests"
+          echo "::notice::Converted $NEW quests"
           if [ "$NEW" -ge 150 ]; then
             cp /tmp/quests.json "$PROJECT_DIR/app/src/main/assets/quests.json"
           else
-            echo "Too few quests converted, keeping the bundled list"
+            echo "::warning::Too few quests converted, keeping the bundled list"
           fi
 
-      - uses: actions/setup-java@v4
+      # Pull the newest teleports, transports and walking map from the Shortest Path plugin.
+      # If anything goes wrong, the travel data already in the project is used instead.
+      - name: Refresh travel data
+        continue-on-error: true
+        run: |
+          git clone --depth 1 https://github.com/Skretzo/shortest-path /tmp/sp
+          mkdir -p /tmp/travel
+          python3 "$PROJECT_DIR/tools/convert_transports.py" /tmp/sp /tmp/travel
+          LINKS=$(wc -l < /tmp/travel/transports.tsv)
+          REGIONS=$(python3 -c "import zipfile;print(len(zipfile.ZipFile('/tmp/travel/collision-map.zip').namelist()))")
+          echo "::notice::Converted $LINKS transport links and $REGIONS map regions"
+          if [ "$LINKS" -ge 10000 ] && [ "$REGIONS" -ge 2400 ]; then
+            cp /tmp/travel/transports.tsv /tmp/travel/collision-map.zip /tmp/travel/places.tsv "$PROJECT_DIR/app/src/main/assets/"
+          else
+            echo "::warning::Too few links converted, keeping the bundled travel data"
+          fi
+
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -50,16 +67,33 @@ jobs:
       - name: Check Android SDK
         run: echo "Android SDK at $ANDROID_HOME" && ls "$ANDROID_HOME/platforms" | tail -3
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: 8.9
 
       - name: Build debug APK
         working-directory: ${{ env.PROJECT_DIR }}
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      # Copy the important lines of a failed build into annotations, so they show on the
+      # run's summary page (and can be read with `gh run view`) without opening the full log.
+      - name: Summarise build errors
+        if: failure()
+        run: |
+          LOG="$RUNNER_TEMP/build.log"
+          [ -f "$LOG" ] || exit 0
+          grep -E "^e: |error:|What went wrong|Execution failed|Could not|FAILURE|AAPT|Exception" "$LOG" \
+            | grep -v "^\s*at " | head -25 \
+            | while IFS= read -r line; do
+                clean=$(printf '%s' "$line" | sed 's/%/%25/g' | cut -c1-400)
+                echo "::error::$clean"
+              done
+          echo "::error::Last lines: $(tail -5 "$LOG" | tr '\n' ' ' | cut -c1-400)"
 
       - name: Upload APK as a workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: QuestOverlay-debug-apk
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk

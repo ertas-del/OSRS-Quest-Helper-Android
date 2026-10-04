@@ -15,13 +15,31 @@ It never reads, hooks or automates the game. You tick each step off yourself, so
 - **What to bring.** The first step of each section lists the items that section needs.
 - **Map button.** Opens the exact tile on the community OSRS world map. The card shrinks to a bubble so the map isn't covered.
 - **Progress bar** plus a *Step 5 of 21* counter.
-- **Three tabs:**
+- **Four tabs:**
   - **Step:** the current step, as above.
+  - **Route:** the travel guide for this step (see below).
   - **Items:** tap-to-tick checklist split into *Required* and *Recommended*, with quantities and tips (for example *"Can be obtained during the quest"*). Below that are the quest's skill, quest-point and quest requirements.
   - **All steps:** the whole quest grouped by section, with finished steps crossed off. It opens scrolled to where you are, and tapping any step jumps there.
 - **Drag** the card by its title to move it. **−** shrinks it to a gold bubble showing `5/21`; tap the bubble to open it again. **×** closes it.
 - **Stays on screen** in portrait and landscape. Lists shrink to fit and the card can't be dragged off the edge.
 - **Touches outside the card go straight to the game.** It never steals your taps or keyboard.
+
+### Travel guide
+- **How to get there, for every step.** A real route finder works out the fastest way from where the last step happened to the next one, using:
+  - teleport spells on all four spellbooks, plus the home teleport
+  - teleport jewellery and items
+  - fairy rings, spirit trees, gnome gliders, magic carpets, quetzals and mushtrees
+  - ships, charter ships, canoes, minecarts and balloons
+  - portals and levers, agility shortcuts, minigame teleports
+- **One-line summary on the Step tab**, e.g. *Travel: Cast Varrock Teleport → Walk 51 tiles south-east*. Tap it for the full route.
+- **Route tab:** each leg with what it needs, e.g. *Magic 25 · 3 Air rune, 1 Fire rune, 1 Law rune* or *needs Tree Gnome Village*, plus total walking distance and time.
+- **Climbs and caves are spelled out:** *Climb down the ladder*, *Climb up the ladder (×2)*.
+- **Travel settings:** members or free-to-play, spellbook, which ways to travel you've unlocked, avoid the Wilderness, use diary teleports, and where to plan the first step from (any bank).
+- **Your account (optional):** type your RuneScape name to
+  - load your levels from the official hiscores, so it skips teleports and shortcuts you can't use yet
+  - import finished quests from WikiSync, if you've played with RuneLite's WikiSync plugin
+- **Mark done** on any quest card, and finishing a quest in the overlay marks it automatically, so quest-locked transport such as spirit trees and gliders unlocks in your routes.
+- Planned on the phone in the background, usually in well under a second.
 
 ### The quest picker
 - **Search** by name. Apostrophes and punctuation don't matter, so *"cooks"* finds Cook's Assistant.
@@ -29,7 +47,9 @@ It never reads, hooks or automates the game. You tick each step off yourself, so
 - **Smart order:** the quest you're showing comes first, then quests in progress, then everything else A–Z.
 - Each card shows type, difficulty, step count, requirements (*Needs: Mining 15, Rune Mysteries*) and your status.
 - **Reset** appears once you've started a quest.
+- **Mark done** for quests you finished before installing the app.
 - **Overlay opacity** slider (40–100%).
+- **Travel settings** button.
 - **Open Old School RuneScape** button to jump straight into the game.
 
 ### Saving
@@ -38,8 +58,8 @@ It never reads, hooks or automates the game. You tick each step off yourself, so
 - Updates install over the old app and keep everything.
 
 ### Always up to date
-- Every build pulls the newest Quest Helper data and converts it, so new quests appear without anyone typing them in.
-- If that ever fails, or returns suspiciously few quests (under 150), the build keeps the quest list already in the project.
+- Every build pulls the newest Quest Helper quests and the newest Shortest Path teleports and walking map, so new content appears without anyone typing it in.
+- If either refresh fails, or returns suspiciously little data, the build keeps what's already in the project.
 
 ---
 
@@ -105,10 +125,24 @@ git clone --depth 1 https://github.com/Zoinkwiz/quest-helper qh
 python3 tools/convert_questhelper.py qh app/src/main/assets/quests.json
 ```
 
+## Where the travel routes come from
+
+Teleports, transports, doors, stairs and the walkability of every tile come from the open-source
+[Shortest Path](https://github.com/Skretzo/shortest-path) RuneLite plugin, converted by `tools/convert_transports.py`.
+The app runs its own route finder on your phone: a shortest-path search over every walkable tile,
+plus every teleport and transport your settings allow. Teleports that cost runes, charges or a cooldown
+get a small penalty, so it won't burn a law rune to save five steps.
+
+The app never sees your bank, inventory or unlocks, so the route lists what each leg needs.
+Switch off anything you don't have in **Travel settings**.
+
 ## Known limits
 
 - About 1 in 6 steps (puzzles, cutscenes, fights) has no map tile, so it shows no arrow and no Map button.
 - A few puzzle-heavy quests show a section title as the step text where Quest Helper uses an in-game puzzle solver the overlay can't copy.
+- About 1 in 5 steps are inside quest instances or puzzle areas the walking map doesn't cover. Those show no route, only the step text.
+- Routes assume you have the runes, jewellery and unlocks for anything switched on in Travel settings.
+- Free-to-play mode doesn't fence off members-only areas while walking. It only limits teleports and boats.
 - It can't tell when you finish a step, by design. That's what keeps it within Jagex's rules.
 - Android only. iPhones don't let apps draw over other apps.
 
@@ -120,14 +154,18 @@ app/src/main/java/com/questoverlay/
   OverlayService.kt   the floating card (foreground service + overlay window)
   Quest.kt            quest data model and JSON loader
   ProgressStore.kt    saved progress, ticks, position, opacity
+  TravelSettingsActivity.kt   travel guide settings and account lookups
+  travel/             route finder, transport data, travel settings, hiscores/WikiSync
   Ui.kt               colours, compass, checkboxes, helpers
 app/src/main/assets/quests.json   the quest data
 tools/convert_questhelper.py      Quest Helper → quests.json converter
-.github/workflows/build.yml       cloud build: refresh data, build APK, publish release
+tools/convert_transports.py       Shortest Path → transports.tsv, places.tsv, collision-map.zip
+app/src/main/assets/transports.tsv, collision-map.zip, places.tsv   travel data
+.github/workflows/build.yml       cloud build: refresh quests and travel data, build APK, publish release
 ```
 
 ## Credits
 
-Quest data © 2020 Zoinkwiz, BSD 2-Clause. See `NOTICE.md` for the full licence.
+Quest data © 2020 Zoinkwiz, BSD 2-Clause. Travel data © Skretzo and contributors (Shortest Path), BSD 2-Clause. See `NOTICE.md` for both licences.
 Map by [mejrs](https://mejrs.github.io/osrs).
 Not affiliated with Jagex or RuneLite. *Old School RuneScape* is a trademark of Jagex Ltd.
