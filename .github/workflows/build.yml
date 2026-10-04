@@ -30,7 +30,10 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      # The GitHub runner already has the Android SDK installed (ANDROID_HOME is set),
+      # so no separate Android setup step is needed. Gradle downloads anything missing.
+      - name: Check Android SDK
+        run: echo "Android SDK at $ANDROID_HOME" && ls "$ANDROID_HOME/platforms" | tail -3
 
       - uses: gradle/actions/setup-gradle@v4
         with:
