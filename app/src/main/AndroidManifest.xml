@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Auto-check: the overlay reads the game screen (only while you have it switched on). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Only for the public hiscores and WikiSync lookups in Travel settings. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -29,6 +31,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Asks Android for permission to read the screen, then closes itself. -->
+        <activity
+            android:name=".capture.CaptureConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <activity
             android:name=".AccountActivity"
             android:exported="false"
@@ -42,7 +52,7 @@
         <service
             android:name=".OverlayService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="specialUse|mediaProjection">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Floating quest checklist drawn over other apps" />

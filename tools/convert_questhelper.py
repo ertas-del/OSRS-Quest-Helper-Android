@@ -647,6 +647,30 @@ def pretty_enum(name):
     return name.replace("_", " ").title()
 
 
+# "Talk to the Cook in ...", "Speak with Martin Holt ...", "Return to King Arthur ..." -> the NPC's name,
+# so screen reading can recognise the conversation. Only capitalised names are taken.
+_NAME = r"(?:the |a |an )?([A-Z][\w'\-]*(?:(?: of| the| de| du)? [A-Z][\w'\-]*)*)"
+TALK_RE = re.compile(r"\b(?:[Tt]alk|[Ss]peak)(?: back)? (?:to|with) " + _NAME)
+# "Return to ..." can name a place ("Return to Camelot and talk to King Arthur"), so it's only a fallback.
+RETURN_RE = re.compile(r"\b(?:[Rr]eturn|[Rr]eport)(?: back)? to " + _NAME)
+
+
+# Places that "Return to ..." sometimes names instead of a person.
+NOT_NPCS = {
+    "Camelot", "Varrock", "Falador", "Lumbridge", "Ardougne", "East Ardougne", "West Ardougne", "Draynor",
+    "Draynor Village", "Port Sarim", "Rimmington", "Edgeville", "Taverley", "Catherby", "Yanille",
+    "Canifis", "Rellekka", "Burthorpe", "Karamja", "Entrana", "Al Kharid", "Seers' Village", "Prifddinas",
+    "Zanaris", "Keldagrim", "Shilo Village", "Brimhaven", "Hosidius", "Port Phasmatys", "Morytania",
+}
+
+
+def npc_name(text):
+    m = TALK_RE.search(text) or RETURN_RE.search(text)
+    if not m or m.group(1) in NOT_NPCS:
+        return ""
+    return m.group(1)
+
+
 def extract_quest_points(src):
     """Quest points the quest awards (getQuestPointReward), or 0."""
     body = src.method_body("getQuestPointReward")
@@ -840,6 +864,9 @@ def convert(qh_root):
                     step["dist"] = dist
                 if d["dialog"]:
                     step["chat"] = d["dialog"]
+                npc = npc_name(d["text"])
+                if npc:
+                    step["npc"] = npc
                 if d["wp"]:
                     step["map"] = d["wp"]
                     prev_wp = d["wp"]

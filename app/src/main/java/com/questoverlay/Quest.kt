@@ -44,7 +44,9 @@ data class Step(
     val distance: Int,
     val chat: List<String>,
     val bring: List<String>,
-    val tile: Tile?
+    val tile: Tile?,
+    /** Who a "Talk to ..." step is about, for recognising the conversation on screen. */
+    val npc: String = ""
 ) {
     /** "Head north-east · about 60 tiles" */
     val directionLabel: String
@@ -144,7 +146,8 @@ object QuestRepository {
                     distance = so.optInt("dist", 0),
                     chat = strings(so.optJSONArray("chat")),
                     bring = strings(so.optJSONArray("bring")),
-                    tile = tile
+                    tile = tile,
+                    npc = so.optString("npc", "")
                 )
             )
         }

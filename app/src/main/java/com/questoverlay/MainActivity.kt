@@ -27,6 +27,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import com.questoverlay.account.Advisor
+import com.questoverlay.capture.CaptureLog
 import com.questoverlay.travel.TravelMode
 import com.questoverlay.travel.TravelStore
 import kotlin.math.roundToInt
@@ -136,6 +137,7 @@ class MainActivity : Activity() {
         content.addView(permissionCard())
         content.addView(opacityCard())
         content.addView(travelCard())
+        content.addView(autoCheckCard())
 
         content.addView(spaced(Ui.button(this, "Open Old School RuneScape", false) { launchGame() }, 12))
         if (OverlayService.running) {
@@ -485,6 +487,64 @@ class MainActivity : Activity() {
         doneLp.leftMargin = Ui.dp(this, 8)
         buttons.addView(done, doneLp)
         c.addView(spaced(buttons, 10))
+        return c
+    }
+
+    /** Explains Auto-check and shows what it read lately, so misreads can be spotted. */
+    private fun autoCheckCard(): View {
+        val c = card()
+        c.addView(Ui.text(this, "Auto-check (screen reading)", 14f, Ui.TEXT, bold = true))
+        val how = Ui.text(
+            this,
+            "Tap \uD83D\uDC41 on the floating card and share the game screen (on Android 14+ pick " +
+                "\"A single app\" \u2192 Old School RuneScape). Breadcrumbs then notices who you're talking to, " +
+                "outlines the right dialogue option, asks \"Looks done?\" and ticks quests off when they're " +
+                "complete. \uD83D\uDD0A / \uD83D\uDD07 turns the voice on or off.",
+            12f,
+            Ui.TAN
+        )
+        how.setPadding(0, Ui.dp(this, 2), 0, 0)
+        c.addView(how)
+        val privacy = Ui.text(
+            this,
+            "It only reads pixels, like a screen recorder: never the game's memory or network, and it never " +
+                "taps anything. Pictures are read on your phone and thrown away; nothing is saved or sent.",
+            11f,
+            Ui.MUTED
+        )
+        privacy.setPadding(0, Ui.dp(this, 6), 0, 0)
+        c.addView(privacy)
+
+        val recent = CaptureLog.recent(16)
+        c.addView(spaced(Ui.text(this, "What it read", 13f, Ui.TEXT, bold = true), 10))
+        val log = Ui.text(
+            this,
+            if (recent.isEmpty()) "Nothing yet. Switch on \uD83D\uDC41 and play for a bit, then come back here."
+            else recent.joinToString("\n"),
+            11f,
+            Ui.MUTED
+        )
+        log.typeface = android.graphics.Typeface.MONOSPACE
+        log.setTextIsSelectable(true)
+        val box = MaxHeightScrollView(this, Ui.dp(this, 220))
+        val p = Ui.dp(this, 8)
+        log.setPadding(p, p, p, p)
+        box.addView(log)
+        box.background = BevelDrawable(this, 0xFF231D16.toInt(), Ui.STONE_DARK, Ui.STONE_LIGHT, Ui.STROKE, raised = false)
+        box.isNestedScrollingEnabled = true
+        c.addView(spaced(box, 4))
+        if (recent.isNotEmpty()) {
+            val row = LinearLayout(this)
+            row.orientation = LinearLayout.HORIZONTAL
+            row.addView(Ui.button(this, "Refresh", false) { refresh() }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            val clp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            clp.leftMargin = Ui.dp(this, 8)
+            row.addView(Ui.button(this, "Clear", false) {
+                CaptureLog.clear()
+                refresh()
+            }, clp)
+            c.addView(spaced(row, 8))
+        }
         return c
     }
 

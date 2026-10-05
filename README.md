@@ -2,7 +2,7 @@
 
 A floating quest guide that sits on top of Old School RuneScape on Android. It covers every quest and miniquest in the RuneLite Quest Helper plugin (208 at the time of writing), one step at a time, with a compass, distances, chat options and item checklists.
 
-It never reads, hooks or automates the game. You tick each step off yourself, so it works like having the wiki open beside you.
+It never hooks into or automates the game: no memory reading, no network snooping, and it never taps anything for you. You tick steps off yourself, or switch on **Auto-check** and it reads the screen (like a screen recorder) to tick them for you.
 
 **[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/Breadcrumbs.apk)** · [Website and install guide](https://ertas-del.github.io/OSRS-Quest-Helper-Android/) · free, no ads, no account · [Tip on Ko-fi](https://ko-fi.com/breadcrumbsqh)
 
@@ -30,6 +30,17 @@ It's dressed like the classic in-game interface: bevelled brown stone panels, pi
 - **Drag** the card by its title to move it. **−** shrinks it to a gold bubble showing `5/21`; tap the bubble to open it again. **×** closes it.
 - **Stays on screen** in portrait and landscape. Lists shrink to fit and the card can't be dragged off the edge.
 - **Touches outside the card go straight to the game.** It never steals your taps or keyboard.
+
+### Auto-check (screen reading)
+- Tap **👁** on the floating card and share the game screen (Android 14+: **A single app → Old School RuneScape**). Android asks each time.
+- **Quest complete is ticked automatically** when the completion scroll or chat message shows the quest's name.
+- **Talk steps:** it notices when you're talking to the step's NPC and, when the chat closes, asks **"Looks done? Tick ✓ / ✕"**.
+- **Dialogue options:** the option the step wants gets an **orange outline** right on the game screen.
+- **Ahead of the guide?** If you're already talking to a later step's NPC, it offers to skip ahead.
+- **Game messages** like "You pick some wheat." that match the step also ask "Looks done?".
+- **Voice:** it says "Choose: Yes.", "Step looks done" and "Quest complete!" out loud. **🔊 / 🔇** on the card mutes it.
+- **What it read:** the main screen shows the last things it read and decided, for spotting misreads.
+- Pictures are read on the phone with Google's ML Kit and thrown away; nothing is saved or sent. Its own card is blacked out in the capture so it never reads itself.
 
 ### Your account
 - **One tap syncs everything:** levels from the official hiscores, finished and in-progress quests and achievement diary progress from WikiSync.

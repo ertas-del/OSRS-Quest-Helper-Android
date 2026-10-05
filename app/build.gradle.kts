@@ -71,3 +71,9 @@ kotlin {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
+
+dependencies {
+    // On-phone text recognition for Auto-check. The Latin model is bundled in the app, so it works
+    // offline and nothing is sent anywhere.
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+}

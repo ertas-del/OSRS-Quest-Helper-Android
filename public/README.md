@@ -2,7 +2,7 @@
 
 A free quest guide that floats on top of Old School RuneScape on your Android phone. Every quest and miniquest, one step at a time, with the route there, the items to bring and help with puzzles.
 
-It never reads, hooks or automates the game. You tick each step off yourself.
+It never hooks into or automates the game, and never taps anything for you. You tick steps off yourself, or let the optional Auto-check read the screen to tick them for you.
 
 **[Download the latest APK](https://github.com/ertas-del/Breadcrumbs/releases/latest/download/Breadcrumbs.apk)** · [Website and install guide](https://ertas-del.github.io/Breadcrumbs/) · [Tip on Ko-fi](https://ko-fi.com/breadcrumbsqh)
 

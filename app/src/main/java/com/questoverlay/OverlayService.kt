@@ -27,6 +27,18 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ScrollView
+import com.questoverlay.capture.CaptureConsentActivity
+import com.questoverlay.capture.CaptureLog
+import com.questoverlay.capture.Coach
+import com.questoverlay.capture.CoachContext
+import com.questoverlay.capture.CoachOutput
+import com.questoverlay.capture.HighlightView
+import com.questoverlay.capture.OcrLine
+import com.questoverlay.capture.ScreenSense
+import com.questoverlay.capture.ScreenWatcher
+import com.questoverlay.capture.Speaker
+import com.questoverlay.capture.StepInfo
+import com.questoverlay.capture.Suggestion
 import com.questoverlay.puzzles.PuzzleRepository
 import com.questoverlay.puzzles.PuzzleState
 import com.questoverlay.puzzles.PuzzleViews
@@ -43,8 +55,9 @@ import kotlin.math.roundToInt
 /**
  * Draws the floating quest card over other apps.
  *
- * The overlay never reads the game. You tick steps off yourself, so there is nothing
- * here that touches the game client, its memory or its network traffic.
+ * With Auto-check (👁) switched on it also reads the screen, the same way a screen recorder
+ * does, to notice conversations, dialogue options and "quest complete". It never touches the
+ * game client, its memory or its network traffic, and never taps anything for you.
  */
 class OverlayService : Service() {
 
@@ -68,12 +81,24 @@ class OverlayService : Service() {
     private var puzzleScroll: ScrollView? = null
     private var puzzleScrollY = 0
 
+    // Auto-check: reading the game screen, only while switched on with 👁.
+    private var watcher: ScreenWatcher? = null
+    private val coach = Coach()
+    private lateinit var speaker: Speaker
+    private var coachStatus: String? = null
+    private var suggestion: Suggestion? = null
+    private var suggestionKey: String? = null
+    private var highlight: HighlightView? = null
+
+    private val watching: Boolean get() = watcher?.running == true
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         running = true
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
+        speaker = Speaker(this)
         store = ProgressStore(this)
         travel = TravelStore(this)
         quests = try {
@@ -91,6 +116,17 @@ class OverlayService : Service() {
 
         // Must be called promptly after startForegroundService().
         startAsForeground()
+
+        when (intent?.action) {
+            ACTION_CAPTURE_GRANTED -> {
+                if (root != null) startWatching(intent) else stopOverlay()
+                return START_NOT_STICKY
+            }
+            ACTION_CAPTURE_DENIED -> {
+                if (root != null) toast("Auto-check needs screen sharing. Tap 👁 to try again.")
+                return START_NOT_STICKY
+            }
+        }
 
         if (intent?.action == ACTION_REFRESH) {
             pendingRoute = null
@@ -130,13 +166,16 @@ class OverlayService : Service() {
 
     override fun onDestroy() {
         removeOverlay()
+        watcher?.shutdown()
+        watcher = null
+        speaker.shutdown()
         running = false
         super.onDestroy()
     }
 
     // ---------------------------------------------------------------- service plumbing
 
-    private fun startAsForeground() {
+    private fun startAsForeground(withCapture: Boolean = watching) {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "Quest card", NotificationManager.IMPORTANCE_LOW)
@@ -161,13 +200,19 @@ class OverlayService : Service() {
             .build()
 
         if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            // Screen capture needs its own foreground type, added only while Auto-check is on.
+            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            if (withCapture) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            startForeground(NOTIFICATION_ID, notification, type)
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
     }
 
     private fun stopOverlay() {
+        watcher?.shutdown()
+        watcher = null
+        hideHighlight()
         removeOverlay()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -290,6 +335,9 @@ class OverlayService : Service() {
     // ---------------------------------------------------------------- state changes
 
     private fun goTo(q: Quest, index: Int) {
+        suggestion = null
+        coachStatus = null
+        hideHighlight()
         store.setStepIndex(q, index)
         // Finishing a quest unlocks its transport for the travel guide.
         if (index >= q.steps.size) travel.setQuestDone(q.name, true)
@@ -314,6 +362,196 @@ class OverlayService : Service() {
         } catch (e: Exception) {
             toast("Open Breadcrumbs from your app list to pick another quest.")
         }
+    }
+
+    // ---------------------------------------------------------------- Auto-check
+
+    /** 👁: start (asks Android for screen sharing) or stop reading the screen. */
+    private fun toggleWatch() {
+        if (watching) {
+            stopWatching()
+            return
+        }
+        try {
+            startActivity(Intent(this, CaptureConsentActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Exception) {
+            toast("Couldn't ask for screen sharing.")
+        }
+    }
+
+    private fun startWatching(intent: Intent) {
+        val code = intent.getIntExtra(EXTRA_CAPTURE_CODE, 0)
+        val data: Intent? = if (Build.VERSION.SDK_INT >= 33) {
+            intent.getParcelableExtra(EXTRA_CAPTURE_DATA, Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION") intent.getParcelableExtra(EXTRA_CAPTURE_DATA)
+        }
+        if (data == null) {
+            toast("Screen sharing didn't start. Tap \uD83D\uDC41 to try again.")
+            return
+        }
+        // Android 14+: the service must be a screen-capture service before the capture starts.
+        startAsForeground(withCapture = true)
+        val w = watcher ?: ScreenWatcher(this, { onScreen(it) }, { onWatchStopped() }).also { watcher = it }
+        try {
+            w.start(code, data)
+            setSecure(true)
+            CaptureLog.note("Auto-check on")
+            render()
+        } catch (e: Exception) {
+            startAsForeground(withCapture = false)
+            toast("Couldn't start Auto-check: ${e.message ?: e.javaClass.simpleName}")
+        }
+    }
+
+    private fun stopWatching() {
+        watcher?.stop()
+        onWatchStopped()
+    }
+
+    /** Capture ended: switched off, phone locked, or sharing stopped from the notification. */
+    private fun onWatchStopped() {
+        setSecure(false)
+        hideHighlight()
+        coachStatus = null
+        suggestion = null
+        if (root != null) startAsForeground(withCapture = false)
+        CaptureLog.note("Auto-check off")
+        render()
+    }
+
+    /** While watching, our own card shows up black in captures, so it never reads its own text. */
+    private fun setSecure(on: Boolean) {
+        val frame = root ?: return
+        params.flags = if (on) params.flags or WindowManager.LayoutParams.FLAG_SECURE
+        else params.flags and WindowManager.LayoutParams.FLAG_SECURE.inv()
+        try {
+            wm.updateViewLayout(frame, params)
+        } catch (e: Exception) {
+            // Overlay is closing.
+        }
+    }
+
+    private fun coachContext(q: Quest): CoachContext {
+        val index = store.stepIndex(q).coerceIn(0, q.steps.size)
+        fun info(i: Int): StepInfo? = q.steps.getOrNull(i)?.let { StepInfo(i, it.text, it.npc, it.chat) }
+        return CoachContext(
+            questId = q.id,
+            questName = q.name,
+            stepCount = q.steps.size,
+            step = info(index),
+            upcoming = listOfNotNull(info(index + 1), info(index + 2))
+        )
+    }
+
+    /** One look at the screen: work out what's happening and react. */
+    private fun onScreen(lines: List<OcrLine>) {
+        val q = quest ?: return
+        if (root == null) return
+        val ctx = coachContext(q)
+        val facts = ScreenSense.read(lines, ctx.names, q.name)
+        val out = coach.onFrame(facts, ctx)
+        CaptureLog.frame(lines, facts, describe(out))
+        out.speak?.let { speaker.say(it) }
+        if (out.completeQuest) {
+            goTo(q, q.steps.size)
+            return
+        }
+        var changed = false
+        if (out.suggestion != null) {
+            suggestion = out.suggestion
+            suggestionKey = ctx.key
+            changed = true
+        }
+        if (out.status != coachStatus) {
+            coachStatus = out.status
+            changed = true
+        }
+        showHighlight(out.highlight)
+        if (changed) render()
+    }
+
+    private fun describe(out: CoachOutput): String? = when {
+        out.completeQuest -> "quest complete: ticking it"
+        out.suggestion != null -> "asking: ${out.suggestion.text}"
+        out.pick != null -> "pick \"${out.pick}\""
+        else -> out.status
+    }
+
+    private fun showHighlight(line: OcrLine?) {
+        if (line == null) {
+            hideHighlight()
+            return
+        }
+        val existing = highlight
+        if (existing != null) {
+            existing.box = line
+            return
+        }
+        val view = HighlightView(this)
+        view.box = line
+        val lp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        )
+        lp.gravity = Gravity.TOP or Gravity.START
+        // Android only lets taps pass through another app's window at 80% opacity or less.
+        lp.alpha = 0.8f
+        lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        try {
+            wm.addView(view, lp)
+            highlight = view
+        } catch (e: Exception) {
+            // Not essential.
+        }
+    }
+
+    private fun hideHighlight() {
+        val view = highlight ?: return
+        try {
+            wm.removeView(view)
+        } catch (e: Exception) {
+            // Already gone.
+        }
+        highlight = null
+    }
+
+    /** "Looks done?" / "Skip ahead?" banner, shown above the step's buttons. */
+    private fun buildSuggestion(q: Quest, s: Suggestion): View {
+        val box = LinearLayout(this)
+        box.orientation = LinearLayout.VERTICAL
+        val p = Ui.dp(this, 8)
+        box.setPadding(p, p, p, p)
+        box.background = Ui.rounded(this, Ui.STONE_DARK, 4, Ui.GOLD, 2)
+        box.addView(Ui.text(this, s.text, 13f, Ui.TAN, bold = true))
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        val yes = Ui.button(this, if (s.kind == Suggestion.Kind.SKIP) "Skip ahead \u203A" else "Tick \u2713", true) {
+            suggestion = null
+            goTo(q, s.targetIndex.coerceIn(0, q.steps.size))
+        }
+        val no = Ui.button(this, "\u2715", false) {
+            coach.dismiss(coachContext(q), s)
+            suggestion = null
+            render()
+        }
+        row.addView(yes, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 3f))
+        val nlp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        nlp.leftMargin = Ui.dp(this, 8)
+        row.addView(no, nlp)
+        val rlp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        rlp.topMargin = Ui.dp(this, 6)
+        box.addView(row, rlp)
+        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lp.topMargin = Ui.dp(this, 8)
+        box.layoutParams = lp
+        return box
     }
 
     // ---------------------------------------------------------------- drawing
@@ -393,7 +631,8 @@ class OverlayService : Service() {
         title.ellipsize = TextUtils.TruncateAt.END
         val subtitle = Ui.text(
             this,
-            if (step >= q.steps.size) "Quest complete" else "Step ${step + 1} of ${q.steps.size}",
+            (if (step >= q.steps.size) "Quest complete" else "Step ${step + 1} of ${q.steps.size}") +
+                if (watching) " \u00B7 watching" else "",
             11f,
             Ui.TAN
         )
@@ -401,6 +640,16 @@ class OverlayService : Service() {
         titles.addView(subtitle)
         row.addView(titles, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
+        val eye = iconButton("\uD83D\uDC41") { toggleWatch() }
+        eye.alpha = if (watching) 1f else 0.45f
+        eye.contentDescription = if (watching) "Auto-check on" else "Auto-check off"
+        row.addView(eye)
+        val voice = iconButton(if (speaker.muted) "\uD83D\uDD07" else "\uD83D\uDD0A") {
+            speaker.muted = !speaker.muted
+            render()
+        }
+        voice.contentDescription = if (speaker.muted) "Voice muted" else "Voice on"
+        row.addView(voice)
         row.addView(iconButton("−") { setCollapsed(true) })
         row.addView(iconButton("×") { stopOverlay() })
 
@@ -497,11 +746,19 @@ class OverlayService : Service() {
             bring.setPadding(0, Ui.dp(this, 4), 0, 0)
             col.addView(bring)
         }
+        if (watching) {
+            val line = Ui.text(this, "\uD83D\uDC41 " + (coachStatus ?: "Watching the screen"), 12f, Ui.GREEN, bold = true)
+            line.setPadding(0, Ui.dp(this, 6), 0, 0)
+            col.addView(line)
+        }
         row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
         val scroll = MaxHeightScrollView(this, listMaxHeight(230))
         scroll.addView(row)
         container.addView(scroll)
+
+        val sug = suggestion
+        if (sug != null && suggestionKey == coachContext(q).key) container.addView(buildSuggestion(q, sug))
 
         val buttons = LinearLayout(this)
         buttons.orientation = LinearLayout.HORIZONTAL
@@ -937,6 +1194,10 @@ class OverlayService : Service() {
         const val ACTION_STOP = "com.questoverlay.STOP"
         const val ACTION_REFRESH = "com.questoverlay.REFRESH"
         const val EXTRA_QUEST_ID = "quest_id"
+        const val ACTION_CAPTURE_GRANTED = "com.questoverlay.CAPTURE_GRANTED"
+        const val ACTION_CAPTURE_DENIED = "com.questoverlay.CAPTURE_DENIED"
+        const val EXTRA_CAPTURE_CODE = "capture_code"
+        const val EXTRA_CAPTURE_DATA = "capture_data"
         private const val CHANNEL_ID = "overlay"
         private const val NOTIFICATION_ID = 1
 
