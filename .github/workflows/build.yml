@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+env:
+  # Switch to "true" to publish releases to the public downloads repo (ertas-del/Breadcrumbs)
+  # instead of this one. Needs the PUBLIC_REPO_TOKEN secret with Contents: Read and write.
+  PUBLISH_TO_PUBLIC_REPO: "false"
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -156,9 +161,8 @@ jobs:
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: ignore
 
-      # Releases go to the public downloads repo (ertas-del/Breadcrumbs) once the
-      # PUBLIC_REPO_TOKEN secret exists, so this source repo can be private. Until then they go
-      # here, as before. Only the newest 10 releases are kept.
+      # Releases go here, or to the public downloads repo (ertas-del/Breadcrumbs) when
+      # PUBLISH_TO_PUBLIC_REPO is "true" (see the top of this file). Only the newest 10 are kept.
       - name: Publish release
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
@@ -168,7 +172,7 @@ jobs:
           PUBLIC_REPO: ertas-del/Breadcrumbs
           SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
-          if [ -n "$PUBLIC_TOKEN" ]; then
+          if [ "$PUBLISH_TO_PUBLIC_REPO" = "true" ] && [ -n "$PUBLIC_TOKEN" ]; then
             export GH_TOKEN="$PUBLIC_TOKEN"; TARGET="$PUBLIC_REPO"; TARGET_ARGS=()
           else
             export GH_TOKEN="$OWN_TOKEN"; TARGET="$GITHUB_REPOSITORY"; TARGET_ARGS=(--target "$GITHUB_SHA")

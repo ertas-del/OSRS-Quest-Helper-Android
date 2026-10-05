@@ -14,6 +14,10 @@ on:
       - ".github/workflows/publish-site.yml"
   workflow_dispatch:
 
+env:
+  # Switch to "true" when the public downloads repo is ready (see build.yml).
+  PUBLISH_TO_PUBLIC_REPO: "false"
+
 jobs:
   publish:
     runs-on: ubuntu-24.04
@@ -25,6 +29,10 @@ jobs:
           PUBLIC_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
           PUBLIC_REPO: ertas-del/Breadcrumbs
         run: |
+          if [ "$PUBLISH_TO_PUBLIC_REPO" != "true" ]; then
+            echo "::notice::Public publishing is switched off; the website is served from this repo."
+            exit 0
+          fi
           if [ -z "$PUBLIC_TOKEN" ]; then
             echo "::notice::No PUBLIC_REPO_TOKEN secret yet; the website is still served from this repo."
             exit 0
