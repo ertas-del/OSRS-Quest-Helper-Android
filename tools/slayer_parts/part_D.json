@@ -1,0 +1,500 @@
+[
+ {
+  "id": "warped_creatures",
+  "name": "Warped creatures",
+  "maxHit": 10,
+  "attackStyles": [
+   "magic"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Earth spells (30% weakness)",
+  "locations": [
+   {
+    "name": "Catacombs of Kourend (south and east)",
+    "how": "Reach the Catacombs of Kourend (e.g. Xeric's talisman or the Kourend entrances), then go to the southern or eastern chambers.",
+    "multi": false,
+    "cannon": false,
+    "note": "Eastern chamber: safespot across the water in the south-east corner or nearby corners."
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Magic / area attacks",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Ice Barrage",
+      "Black dragonhide armour"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Venator bow",
+      "Chinchompas"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit is only 10 and Protect from Melee stops all damage."
+  },
+  "tips": [
+   "Protect from Melee prevents all damage from warped jellies.",
+   "Safespot across the water in the eastern chamber.",
+   "Chinchompas or Ice Barrage speed up kills."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Warped_Jelly"
+ },
+ {
+  "id": "waterfiends",
+  "name": "Waterfiends",
+  "maxHit": 11,
+  "attackStyles": [
+   "magic",
+   "ranged"
+  ],
+  "protectPrayer": null,
+  "weakness": "Crush weapons, heavy ranged and Earth spells",
+  "locations": [
+   {
+    "name": "Ancient Cavern",
+    "how": "Dungeon beneath Baxtorian Falls; needs Barbarian Training progress for access.",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   },
+   {
+    "name": "Kraken Cove",
+    "how": "Task-only spawns in Kraken Cove (Kandarin).",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   },
+   {
+    "name": "Iorwerth Dungeon",
+    "how": "Prifddinas dungeon; also gives crystal shard drops.",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Ranged - heavy / Melee - crush",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Crush weapon"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Heavy ranged weapon"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit 11 - judgement."
+  },
+  "tips": [
+   "Immune to poison and venom.",
+   "Weak to crush and heavy ranged; resistant to slash/stab and magic.",
+   "Drop fiendish ashes 100% of the time."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Waterfiend"
+ },
+ {
+  "id": "wyrms",
+  "name": "Wyrms",
+  "maxHit": 13,
+  "attackStyles": [
+   "slash",
+   "magic"
+  ],
+  "protectPrayer": null,
+  "weakness": "Earth spells (50%); dragonbane weapons",
+  "locations": [
+   {
+    "name": "Karuulm Slayer Dungeon (lower level)",
+    "how": "Fairy ring CIR south of Mount Karuulm, or Rada's blessing 3/4.",
+    "multi": false,
+    "cannon": false,
+    "note": "No multicannon in the dungeon."
+   },
+   {
+    "name": "Wyrmscraig Cavern",
+    "how": "Needs partial completion of Fallen From Grace.",
+    "multi": false,
+    "cannon": true,
+    "note": "Dwarf cannon allowed here."
+   }
+  ],
+  "mustBring": [
+   "Boots of stone, boots of brimstone or granite boots (heat protection in Karuulm; not needed with Elite Kourend & Kebos Diary)"
+  ],
+  "gear": {
+   "style": "Ranged or Magic",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Boots of stone",
+      "Earth spells"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Dragon hunter crossbow",
+      "Boots of brimstone"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit 13, judgement: low damage taken."
+  },
+  "tips": [
+   "No dragonfire protection needed.",
+   "Dragonbane weapons work well.",
+   "Immune to poison and venom."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Wyrm"
+ },
+ {
+  "id": "abyssal_demons",
+  "name": "Abyssal demons",
+  "maxHit": 8,
+  "attackStyles": [
+   "stab"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": null,
+  "locations": [
+   {
+    "name": "Slayer Tower",
+    "how": "Slayer ring to Slayer Tower; they are on the upper floors.",
+    "multi": false,
+    "cannon": false,
+    "note": "Cannot safespot."
+   },
+   {
+    "name": "Catacombs of Kourend",
+    "how": "Catacombs entrance in Kourend.",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   },
+   {
+    "name": "Wilderness Slayer Cave",
+    "how": "Wilderness; PvP risk.",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   },
+   {
+    "name": "Abyssal Area",
+    "how": "Via the Abyss.",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   }
+  ],
+  "mustBring": [
+   "85 Slayer is needed to damage them; Teleport anchoring scroll optional (stops forced teleports)"
+  ],
+  "gear": {
+   "style": "Melee",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Abyssal whip",
+      "Fire cape"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Arclight",
+      "Scythe of Vitur"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit only 8."
+  },
+  "tips": [
+   "They can teleport you up to 20 tiles; safespotting is not viable.",
+   "Turn on Auto Retaliate.",
+   "Demonbane weapons work."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Abyssal_demon"
+ },
+ {
+  "id": "cave_kraken",
+  "name": "Cave kraken",
+  "maxHit": 13,
+  "attackStyles": [
+   "magic"
+  ],
+  "protectPrayer": "Protect from Magic",
+  "weakness": "Earth spells (50%)",
+  "locations": [
+   {
+    "name": "Kraken Cove",
+    "how": "Kraken Cove in Kandarin; disturb a whirlpool to fight one.",
+    "multi": false,
+    "cannon": false,
+    "note": "Immune to cannons and thralls."
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Magic",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Trident of the seas"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Trident of the swamp",
+      "Tumeken's shadow"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit 13 - judgement."
+  },
+  "tips": [
+   "Needs 87 Slayer and a task to attack.",
+   "Ranged does 1/7 damage; melee cannot be used.",
+   "Not aggressive until disturbed."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Cave_kraken"
+ },
+ {
+  "id": "dark_beasts",
+  "name": "Dark beasts",
+  "maxHit": 17,
+  "attackStyles": [
+   "crush",
+   "magic"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Earth spells (60%)",
+  "locations": [
+   {
+    "name": "Mourner Tunnels",
+    "how": "Slayer ring teleports straight to the Mourner Tunnels (West Ardougne).",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   },
+   {
+    "name": "Iorwerth Dungeon",
+    "how": "Prifddinas, after Song of the Elves.",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Ranged / Magic",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Magic with Earth spells"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Twisted bow",
+      "Tumeken's shadow"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Max hit 17 melee; always aggressive."
+  },
+  "tips": [
+   "Always aggressive; ignore tolerance.",
+   "Protect from Melee is recommended.",
+   "Cannons and thralls work."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Dark_beast"
+ },
+ {
+  "id": "drakes",
+  "name": "Drakes",
+  "maxHit": 32,
+  "attackStyles": [
+   "ranged",
+   "dragonfire"
+  ],
+  "protectPrayer": "Protect from Missiles",
+  "weakness": "Water spells (50%); dragonbane",
+  "locations": [
+   {
+    "name": "Karuulm Slayer Dungeon (middle level)",
+    "how": "Fairy ring CIR south of Mount Karuulm, or Rada's blessing.",
+    "multi": false,
+    "cannon": false,
+    "note": ""
+   }
+  ],
+  "mustBring": [
+   "Boots of stone, boots of brimstone or granite boots (heat protection)",
+   "Super antifire potion (volcanic breath counts as dragonfire)"
+  ],
+  "gear": {
+   "style": "Ranged",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Dragon hunter crossbow"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Toxic blowpipe"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Max hit 15 normal, volcanic breath treated as dragonfire."
+  },
+  "tips": [
+   "Protect from Missiles blocks normal attacks.",
+   "Volcanic breath after 7 attacks; step one tile away.",
+   "Super antifire lets you keep defender/blowpipe."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Drake"
+ },
+ {
+  "id": "hydras",
+  "name": "Hydras",
+  "maxHit": 22,
+  "attackStyles": [
+   "magic",
+   "ranged"
+  ],
+  "protectPrayer": "Protect from Magic / Missiles (alternates)",
+  "weakness": "Earth spells (40%)",
+  "locations": [
+   {
+    "name": "Karuulm Slayer Dungeon",
+    "how": "Fairy ring CIR south of Mount Karuulm, or Rada's blessing.",
+    "multi": false,
+    "cannon": false,
+    "note": "One area only for players on task."
+   }
+  ],
+  "mustBring": [
+   "Boots of stone, boots of brimstone or granite boots (heat protection)"
+  ],
+  "gear": {
+   "style": "Ranged / Melee",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Boots of stone"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Brimstone ring"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "heavy",
+   "note": "Max hit 22, judgement."
+  },
+  "tips": [
+   "Style alternates every 3 attacks; flick prayers.",
+   "Middle head poison splats three tiles.",
+   "Poison immunity halves poison damage."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Hydra"
+ },
+ {
+  "id": "smoke_devils",
+  "name": "Smoke devils",
+  "maxHit": 20,
+  "attackStyles": [
+   "magical ranged"
+  ],
+  "protectPrayer": "Protect from Missiles",
+  "weakness": "Air spells (30%)",
+  "locations": [
+   {
+    "name": "Smoke Devil Dungeon",
+    "how": "Fairy ring BKP (Feldip Hills, south of Castle Wars).",
+    "multi": true,
+    "cannon": true,
+    "note": "Hide behind bone piles to stack."
+   }
+  ],
+  "mustBring": [
+   "Slayer helmet, slayer helmet (i) or facemask (required to damage them)"
+  ],
+  "gear": {
+   "style": "Magic (burst/barrage)",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Ancient Staff",
+      "Facemask"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Slayer helmet (i)",
+      "Chinchompas"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Max hit 20; Protect from Missiles negates."
+  },
+  "tips": [
+   "Protect from Missiles negates attacks.",
+   "Burst/barrage and chinchompas work in the multi area.",
+   "Not counted for dust devil tasks."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Smoke_devil"
+ }
+]

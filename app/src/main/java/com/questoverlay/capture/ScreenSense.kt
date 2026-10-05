@@ -90,7 +90,9 @@ data class ScreenFacts(
     /** "Your Vorkath kill count is: 413." Several can be on screen at once. */
     val killCounts: List<KillCount> = emptyList(),
     /** The chat messages with their times ("1829"), for telling a new message from an old one. */
-    val timedMessages: List<Pair<String?, String>> = emptyList()
+    val timedMessages: List<Pair<String?, String>> = emptyList(),
+    /** Everything said in the open dialogue box, top to bottom, joined ("Your new task is to kill 150 ..."). */
+    val dialogueText: String = ""
 )
 
 /**
@@ -293,7 +295,8 @@ object ScreenSense {
             messages = messages,
             diaryTask = timed.asReversed().firstNotNullOfOrNull { (t, m) -> Chat.diaryTask(m, t) },
             killCounts = messages.mapNotNull { Chat.killCount(it) },
-            timedMessages = timed
+            timedMessages = timed,
+            dialogueText = boxLines.sortedBy { lines[it].top }.joinToString(" ") { lines[it].text }
         )
     }
 }

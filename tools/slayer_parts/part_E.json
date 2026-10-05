@@ -1,0 +1,69 @@
+[
+{"id":"crawling_hands","name":"Crawling hands","maxHit":1,"attackStyles":["crush"],"protectPrayer":null,"weakness":"Undead: Crumble Undead spell and salve amulet work","locations":[
+{"name":"Slayer Tower (ground floor)","how":"Slayer Tower in Morytania (Slayer ring teleport works), ground floor.","multi":null,"cannon":null,"note":"Wiki lists 24 spawns here."},
+{"name":"Meiyerditch Laboratories","how":"Meiyerditch Laboratories in Morytania.","multi":null,"cannon":null,"note":"Wiki lists 10 spawns here."}],
+"mustBring":[],"gear":{"style":null,"tiers":[]},"food":{"amount":"none","note":"Max hit 1 (judgement)"},
+"tips":["First Slayer monster you can kill (5 Slayer).","Crumble Undead and salve amulet work.","Bigger and Badder: 1/200 chance of a Crushing Hand superior."],"source":"https://oldschool.runescape.wiki/w/Crawling_hand"},
+{"id":"cave_crawlers","name":"Cave crawlers","maxHit":3,"attackStyles":["stab"],"protectPrayer":null,"weakness":"None (icy cave crawlers: 50% fire weakness)","locations":[
+{"name":"Fremennik Slayer Dungeon","how":"Fairy ring AJR, then enter the dungeon.","multi":null,"cannon":true,"note":"Low Defence players can use Ranged/Magic from wall safespots. 8 spawns."},
+{"name":"Lumbridge Swamp Caves","how":"Lumbridge Swamp, enter the caves.","multi":null,"cannon":true,"note":"Exposed light sources explode here. 3 spawns."},
+{"name":"Dorgesh-Kaan South Dungeon","how":"Dorgesh-Kaan south dungeon.","multi":null,"cannon":true,"note":"5 spawns."},
+{"name":"Ruins of Tapoyauik (icy)","how":"Ruins of Tapoyauik, Varlamore.","multi":null,"cannon":true,"note":"Icy variant, 7 spawns."}],
+"mustBring":["Antidote++ or other poison protection (their poison is strong)","Bullseye or oil lantern (light source for Lumbridge Swamp Caves)"],"gear":{"style":null,"tiers":[]},"food":{"amount":"light","note":"Max hit 3 (judgement); poison is the main danger"},
+"tips":["They regenerate 1 HP every 5 ticks, so kill them quickly.","Use poison protection.","Cannon is allowed."],"source":"https://oldschool.runescape.wiki/w/Cave_crawler"},
+{"id":"banshees","name":"Banshees","maxHit":26,"attackStyles":["magic"],"protectPrayer":null,"weakness":"Air spells (30%); undead - Crumble Undead and salve amulet work","locations":[
+{"name":"Slayer Tower (ground floor, east side)","how":"Slayer Tower in Morytania (Slayer ring teleport works), ground floor east side.","multi":null,"cannon":true,"note":"8 spawns. Safespot north of the staircase behind a standing torch."}],
+"mustBring":["Earmuffs or Slayer helmet (stops the screams reducing stats and damaging you; max hit drops from 26 to 2)"],"gear":{"style":"Ranged (magic-based attacks, so ranged armour gives better defence)","tiers":[]},"food":{"amount":"light","note":"Max hit is 2 with earmuffs/Slayer helmet; 26 without"},
+"tips":["Wear earmuffs or a Slayer helmet at all times.","Salve amulet and Slayer helmet effects do not stack.","Cannon and thralls work."],"source":"https://oldschool.runescape.wiki/w/Banshee"},
+{"id":"rockslugs","name":"Rockslugs","maxHit":4,"attackStyles":["crush"],"protectPrayer":null,"weakness":"Earth spells (25%)","locations":[
+{"name":"Fremennik Slayer Dungeon","how":"Fairy ring AJR, then enter the dungeon.","multi":null,"cannon":true,"note":"7 spawns."},
+{"name":"Lumbridge Swamp Caves","how":"Lumbridge Swamp, enter the caves.","multi":null,"cannon":true,"note":"5 spawns."},
+{"name":"Ynysdail Cavern","how":"Ynysdail (needs boat access).","multi":null,"cannon":true,"note":"8 spawns."},
+{"name":"Tonali Cavern","how":"Tonali Cavern, Varlamore.","multi":null,"cannon":true,"note":"6 spawns."},
+{"name":"Dorgesh-Kaan South Dungeon","how":"Dorgesh-Kaan south dungeon.","multi":null,"cannon":true,"note":"1 spawn."}],
+"mustBring":["Bag of salt (use on a rockslug at 4 or less HP to finish it; a Brine sabre removes the need)"],"gear":{"style":null,"tiers":[]},"food":{"amount":"light","note":"Max hit 4 (judgement)"},
+"tips":["Unlock Slug Salter (10 Slayer points) to auto-salt below 4 HP.","Brine sabre removes the salt requirement.","Cannon and thralls work."],"source":"https://oldschool.runescape.wiki/w/Rockslug"},
+{"id":"cockatrice","name":"Cockatrice","maxHit":5,"attackStyles":["stab"],"protectPrayer":null,"weakness":null,"locations":[
+{"name":"Fremennik Slayer Dungeon","how":"Fairy ring AJR, then enter the dungeon.","multi":null,"cannon":false,"note":"7 spawns. Cannon cannot be set up here."}],
+"mustBring":["Mirror shield or V's shield (blocks the piercing gaze that reduces stats every hit; mirror shield needs 20 Defence)"],"gear":{"style":null,"tiers":[]},"food":{"amount":"light","note":"Max hit 5 (judgement)"},
+"tips":["Without the shield the gaze drains stats even while safespotting.","Slayer level 25 required."],"source":"https://oldschool.runescape.wiki/w/Cockatrice"},
+{"id":"pyrefiends","name":"Pyrefiends","maxHit":4,"attackStyles":["magic melee"],"protectPrayer":"Protect from Melee","weakness":"Water spells (100%)","locations":[
+{"name":"Fremennik Slayer Dungeon","how":"Fairy ring AJR, then enter the dungeon.","multi":null,"cannon":false,"note":"13 spawns; safespots available. Cannon does not work here."},
+{"name":"Isle of Souls","how":"Isle of Souls.","multi":null,"cannon":true,"note":"10 spawns; cannon works in the burnt forest area."},
+{"name":"Smoke Dungeon","how":"Smoke Dungeon.","multi":null,"cannon":null,"note":"23 spawns."},
+{"name":"Sisterhood Sanctuary","how":"Sisterhood Sanctuary.","multi":null,"cannon":null,"note":"21 spawns."},
+{"name":"God Wars Dungeon","how":"God Wars Dungeon.","multi":null,"cannon":null,"note":"4 spawns."}],
+"mustBring":[],"gear":{"style":"Ranged or Magic (low magic defence); ranged armour helps against their magical melee","tiers":[{"label":"Budget","items":["Dragonhide armour"]}]},"food":{"amount":"light","note":"Max hit 4 (judgement)"},
+"tips":["Magic defence is low, so ranged and magic hit well.","Halberd is an alternative to melee.","Protect from Melee needs 43 Prayer."],"source":"https://oldschool.runescape.wiki/w/Pyrefiend"},
+{"id":"infernal_mages","name":"Infernal mages","maxHit":8,"attackStyles":["magic"],"protectPrayer":"Protect from Magic","weakness":"Weak to burn effects","locations":[
+{"name":"Slayer Tower (1st floor UK / 2nd floor US)","how":"Slayer Tower in Morytania; take the south-east stairs past the Banshees, or 18 Agility broken window shortcut.","multi":null,"cannon":true,"note":"15 spawns."}],
+"mustBring":["Earmuffs or Slayer helmet (to avoid Banshee aggression if using the main stairs)"],"gear":{"style":null,"tiers":[]},"food":{"amount":"light","note":"Max hit 8; Protect from Magic negates it (judgement)"},
+"tips":["Protect from Magic negates their attack completely.","Slayer level 45 required.","18 Agility shortcut avoids the Banshees."],"source":"https://oldschool.runescape.wiki/w/Infernal_Mage"},
+{"id":"gryphons","name":"Gryphons","maxHit":8,"attackStyles":["crush"],"protectPrayer":null,"weakness":"Air spells (50%)","locations":[
+{"name":"Great Conch western cave","how":"Great Conch island (needs Troubled Tortugans quest and 45 Sailing).","multi":true,"cannon":true,"note":"18 spawns; multicombat in the south room."},
+{"name":"Great Conch eastern cave","how":"Great Conch island (needs Troubled Tortugans quest and 45 Sailing).","multi":true,"cannon":true,"note":"Task only, 18 spawns."}],
+"mustBring":[],"gear":{"style":"Melee (stronger than magic despite air weakness)","tiers":[]},"food":{"amount":"moderate","note":"Max hit 8 plus 20+ special (judgement)"},
+"tips":["Their knockback special hits you if equipped weight is below 30kg; at 30kg+ they stun instead and you get a free hit.","51 Slayer needed.","Nieve/Duradel need the Wings Spread unlock (80 points)."],"source":"https://oldschool.runescape.wiki/w/Gryphon"},
+{"id":"custodian_stalkers","name":"Custodian stalkers","maxHit":null,"attackStyles":[],"protectPrayer":null,"weakness":null,"locations":[
+{"name":"Stalker Den (south-western side)","how":"Stalker Den; needs the Shadows of Custodia quest.","multi":true,"cannon":true,"note":"Multicombat, cannon allowed."},
+{"name":"Stalker Den (south-eastern and northern caverns)","how":"Stalker Den; needs the Shadows of Custodia quest.","multi":false,"cannon":null,"note":"Single-combat caverns."}],
+"mustBring":[],"gear":{"style":null,"tiers":[]},"food":{"amount":"moderate","note":"Wiki gives no hint; judgement"},
+"tips":["Assigned by Chaeldar, Mortimer and Nieve.","Drop broken antlers."],"source":"https://oldschool.runescape.wiki/w/Custodian_stalker"},
+{"id":"cave_horrors","name":"Cave horrors","maxHit":9,"attackStyles":["magic melee"],"protectPrayer":"Protect from Melee","weakness":"Fire spells (30%)","locations":[
+{"name":"Mos Le'Harmless Cave","how":"Minigame Teleport to Trouble Brewing, ectophial to Port Phasmatys then charter ship, or Mos le'harmless teleport scroll.","multi":true,"cannon":true,"note":"70 spawns; safespots near the entrance using mushrooms and stalagmites."}],
+"mustBring":["Witchwood icon or Protect from Melee (negates the special attack)","Light source (unless the fire of eternal light is lit)"],"gear":{"style":"Ranged or Magic (fast ranged weapons)","tiers":[{"label":"Budget","items":["Magic shortbow","Dragonhide armour"]},{"label":"Best","items":["Toxic blowpipe"]}]},"food":{"amount":"moderate","note":"Max hit 9; special deals 10% of base Hitpoints (judgement)"},
+"tips":["Needs Cabin Fever quest and 58 Slayer.","Dwarf multicannon speeds up kills.","Witchwood icon reduces special frequency."],"source":"https://oldschool.runescape.wiki/w/Cave_horror"},
+{"id":"venators","name":"Venators","maxHit":21,"attackStyles":["stab","ranged"],"protectPrayer":"Protect from Missiles","weakness":"Vampyrebane weapons only","locations":[
+{"name":"Virer Hunting Ground","how":"Drakan's medallion to Castle Draken, bank chest in Sangvesti, portal, run south over the pillar (73 Agility shortcut, pickaxe for rubble).","multi":null,"cannon":null,"note":"12 spawns."},
+{"name":"Apsul Hunting Ground","how":"Same route as Virer Hunting Ground.","multi":null,"cannon":null,"note":"7 spawns."}],
+"mustBring":["Ivandis flail, blisterwood flail, hallowed flail, Sunspear or blisterwood stakes (only things that damage them)","Earmuffs or Slayer helmet (reduces shriek damage)"],"gear":{"style":"Melee with a vampyrebane weapon","tiers":[]},"food":{"amount":"heavy","note":"Max hit 21; they heal when hitting you with melee (judgement)"},
+"tips":["Needs The Blood Moon Rises and 74 Slayer.","Prayer negates ranged and most melee damage; shriek still hits through prayer and drains prayer.","Sunspear special drops hearts restoring prayer."],"source":"https://oldschool.runescape.wiki/w/Venator"},
+{"id":"aquanites","name":"Aquanites","maxHit":18,"attackStyles":["magic"],"protectPrayer":"Protect from Magic","weakness":null,"locations":[
+{"name":"Ynysdail Cavern","how":"Sail to Ynysdail (73 Sailing, adamant keel boat). Later, 70 Construction rowboat links Ynysdail and Gwenith.","multi":null,"cannon":false,"note":"16 spawns. Immune to cannons."}],
+"mustBring":[],"gear":{"style":"Melee (slash) or Ranged","tiers":[{"label":"Budget","items":["Bandos chestplate","Bandos tassets","Dragon defender","Berserker ring (i)","Abyssal whip"]},{"label":"Best","items":["Slayer helmet (i)","Torva platebody","Torva platelegs","Ghrazi rapier","Avernic defender","Infernal cape","Ultor ring"]}]},"food":{"amount":"heavy","note":"Max hit 18, high accuracy magic (judgement)"},
+"tips":["Attack with slash to sever their lure; stab Defence drops from 60 to 10.","Saradomin godsword special restores Prayer.","Bring a seed box; 78 Slayer needed."],"source":"https://oldschool.runescape.wiki/w/Aquanite"},
+{"id":"araxytes","name":"Araxytes","maxHit":13,"attackStyles":["crush"],"protectPrayer":null,"weakness":"Fire spells (50%)","locations":[
+{"name":"Araxyte Cave (Morytania Spider Cave, task-only area)","how":"Morytania Spider Cave, task-only area.","multi":true,"cannon":null,"note":"12 level-96 and 21 level-146 spawns."}],
+"mustBring":["Prayer and a way to stave off venom (venomous and numerous in multi-combat)"],"gear":{"style":null,"tiers":[]},"food":{"amount":"heavy","note":"Max hit 13 with many venomous attackers (judgement)"},
+"tips":["Level 96 variants are one of the fastest Slayer tasks.","Level 146 variants double common drops and aranea boots rate.","92 Slayer needed."],"source":"https://oldschool.runescape.wiki/w/Araxyte"}
+]

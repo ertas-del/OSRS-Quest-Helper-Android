@@ -6,6 +6,7 @@ import com.questoverlay.Ui
 import com.questoverlay.farming.FarmingActivity
 import com.questoverlay.location.WhereActivity
 import com.questoverlay.sailing.SailingActivity
+import com.questoverlay.slayer.SlayerActivity
 import com.questoverlay.travel.TravelStore
 
 /** Everything the coach does besides quests: vitals warnings and links to the other tools. */
@@ -34,5 +35,6 @@ class CoachSettingsActivity : ScreenActivity() {
         tools.addView(spaced(Ui.button(this, "Kill counts & pets", false) { startActivity(Intent(this, PetsActivity::class.java)) }, 8))
         tools.addView(spaced(Ui.button(this, "Where am I (minimap)", false) { startActivity(Intent(this, WhereActivity::class.java)) }, 8))
         tools.addView(spaced(Ui.button(this, "Sailing", false) { startActivity(Intent(this, SailingActivity::class.java)) }, 8))
+        tools.addView(spaced(Ui.button(this, "Slayer", false) { startActivity(Intent(this, SlayerActivity::class.java)) }, 8))
     }
 }

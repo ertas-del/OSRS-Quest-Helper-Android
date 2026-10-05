@@ -66,6 +66,11 @@ import com.questoverlay.account.Advisor
 import com.questoverlay.account.Req
 import com.questoverlay.sailing.NavTarget
 import com.questoverlay.sailing.SailPlanner
+import com.questoverlay.slayer.SlayerChat
+import com.questoverlay.slayer.SlayerData
+import com.questoverlay.slayer.SlayerEvent
+import com.questoverlay.slayer.SlayerStore
+import com.questoverlay.slayer.SlayerViews
 import com.questoverlay.sailing.SailingData
 import com.questoverlay.sailing.SailingStore
 import android.os.Handler
@@ -145,6 +150,8 @@ class OverlayService : Service() {
     // Where am I: the minimap matched against the world map, on a background thread.
     private lateinit var locatorStore: LocatorStore
     private lateinit var sailing: SailingStore
+    private lateinit var slayer: SlayerStore
+    private var slayerPanel = false
     private val locWorker = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     @Volatile private var locBusy = false
@@ -179,6 +186,7 @@ class OverlayService : Service() {
         farming = FarmingStore(this)
         locatorStore = LocatorStore(this)
         sailing = SailingStore(this)
+        slayer = SlayerStore(this)
         quests = try {
             QuestRepository.load(this)
         } catch (e: Exception) {
@@ -607,6 +615,24 @@ class OverlayService : Service() {
         }
     }
 
+    /** A Slayer message from the game: remember the task, and say what to bring for it. */
+    private fun onSlayerMessage(text: String) {
+        val e = SlayerChat.parse(text) ?: return
+        val line = slayer.apply(e) ?: return
+        CaptureLog.note("SLAYER $line")
+        if (e is SlayerEvent.NewTask) {
+            val data = try { SlayerData.load(this) } catch (x: Exception) { null }
+            val card = data?.matchCard(e.name)
+            slayerPanel = false
+            if (card != null && card.mustBring.isNotEmpty()) {
+                speaker.say("Bring " + card.mustBring.first().substringBefore(" (").lowercase())
+                showBanner("\u2694 ${card.name}: bring " + card.mustBring.joinToString(", ") { it.substringBefore(" (") })
+                return
+            }
+        }
+        info("\u2694 $line")
+    }
+
     private fun fairytaleDone(): Boolean? =
         if (travel.completedQuests.isEmpty()) null else travel.isQuestDone("Fairytale I - Growing Pains")
 
@@ -619,11 +645,15 @@ class OverlayService : Service() {
         }
         // Farming reacts only to messages that appear while watching (not old ones already in chat).
         val fresh = facts.timedMessages.filter { (t, m) -> seenChat.add("${t ?: ""}|${Fuzzy.norm(m)}") }
+        // The master's dialogue ("Your new task is to kill ...") is in the dialogue box, not the chat.
+        val dialogue = facts.dialogueText.takeIf { it.isNotBlank() && seenChat.add("dlg|" + Fuzzy.norm(it)) }
         while (seenChat.size > 400) seenChat.remove(seenChat.first())
         if (!chatPrimed) {
             chatPrimed = true
             return
         }
+        dialogue?.let { onSlayerMessage(it) }
+        for ((_, m) in fresh) onSlayerMessage(m)
         for ((_, m) in fresh) {
             Farming.planting(m)?.let { p ->
                 if (farming.autoStart) {
@@ -885,6 +915,47 @@ class OverlayService : Service() {
         return row
     }
 
+    /** Slayer task strip: what's left, tap for the monster card (where, wear, bring, food). */
+    private fun buildSlayerStrip(): View? {
+        val t = slayer.task ?: return null
+        val data = try { SlayerData.load(this) } catch (e: Exception) { return null }
+        val box = LinearLayout(this)
+        box.orientation = LinearLayout.VERTICAL
+        val p = Ui.dp(this, 6)
+        box.setPadding(p, p / 2, p / 2, p / 2)
+        box.background = Ui.rounded(this, Ui.STONE_DARK, 4, Ui.STROKE, 1)
+
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = Gravity.CENTER_VERTICAL
+        val col = LinearLayout(this)
+        col.orientation = LinearLayout.VERTICAL
+        val done = t.remaining <= 0
+        val name = Ui.text(this, "\u2694 " + (if (done) "${t.name} done" else "${t.remaining} ${t.name}") + if (slayerPanel) "  \u25BE" else "  \u25B8", 13f, if (done) Ui.GREEN else Ui.GOLD, bold = true)
+        name.maxLines = 2
+        name.ellipsize = TextUtils.TruncateAt.END
+        col.addView(name)
+        val sub = listOfNotNull(t.place, if (done) "back to your master" else null).joinToString(" \u00B7 ")
+        if (sub.isNotEmpty()) col.addView(Ui.text(this, sub, 11f, Ui.TAN))
+        col.setOnClickListener { slayerPanel = !slayerPanel; render() }
+        row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(iconButton("\u2715") { slayer.task = null; slayerPanel = false; render() })
+        box.addView(row)
+
+        if (slayerPanel) {
+            val view = SlayerViews.monsterCard(this, t.name, data.matchCard(t.name), data.matchRow(t.master, t.name), t.place)
+            val scroll = MaxHeightScrollView(this, listMaxHeight(300))
+            scroll.addView(view)
+            val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = Ui.dp(this, 4)
+            box.addView(scroll, lp)
+        }
+        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lp.topMargin = Ui.dp(this, 6)
+        box.layoutParams = lp
+        return box
+    }
+
     /** The red alert strip at the top of the card; it goes away after two minutes or with ✕. */
     private fun buildAlertBanner(): View? {
         val text = alertBanner ?: return null
@@ -1040,6 +1111,7 @@ class OverlayService : Service() {
         card.addView(buildHeader(q, step))
         buildAlertBanner()?.let { card.addView(it) }
         buildNavStrip()?.let { card.addView(it) }
+        buildSlayerStrip()?.let { card.addView(it) }
         buildSailPicker()?.let { card.addView(it) }
         card.addView(buildProgress(q, step))
         when {

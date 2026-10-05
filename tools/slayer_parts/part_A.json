@@ -1,0 +1,613 @@
+[
+ {
+  "id": "aberrant_spectres",
+  "name": "Aberrant spectres",
+  "maxHit": 8,
+  "attackStyles": [
+   "magic"
+  ],
+  "protectPrayer": null,
+  "weakness": "Air spells (50% weakness); melee also works",
+  "locations": [
+   {
+    "name": "Slayer Tower",
+    "how": "Slayer ring -> Slayer Tower (Morytania), upper floors.",
+    "multi": false,
+    "cannon": false,
+    "note": "Most spawns (14)"
+   },
+   {
+    "name": "Stronghold Slayer Cave",
+    "how": "Slayer ring -> Stronghold Slayer Cave (Kandarin).",
+    "multi": false,
+    "cannon": false,
+    "note": "13 spawns"
+   },
+   {
+    "name": "Deepfin Mine",
+    "how": "Deepfin Point mine area.",
+    "multi": false,
+    "cannon": false,
+    "note": "7 spawns"
+   }
+  ],
+  "mustBring": [
+   "Nose peg or Slayer helmet (stops the stat-draining special attack)"
+  ],
+  "gear": {
+   "style": "Magic (air spells) or melee",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Slayer helmet",
+      "Dragonhide armour",
+      "Staff of air"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Slayer helmet (i)",
+      "Salve amulet",
+      "Dragonhide armour"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit only 8 with nose peg (14 without)"
+  },
+  "tips": [
+   "Nose peg needs 60 Slayer; Slayer helmet has no level requirement",
+   "Magic-resistant armour such as dragonhide helps",
+   "Bring a herb sack and seed box for the herb and seed drops",
+   "Salve amulet does not stack with Slayer helmet"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Aberrant_spectre"
+ },
+ {
+  "id": "ankou",
+  "name": "Ankou",
+  "maxHit": 8,
+  "attackStyles": [
+   "crush"
+  ],
+  "protectPrayer": null,
+  "weakness": "Air spells (40% weakness)",
+  "locations": [
+   {
+    "name": "Stronghold Slayer Cave",
+    "how": "Slayer ring -> Stronghold Slayer Cave (Kandarin).",
+    "multi": false,
+    "cannon": true,
+    "note": "Can be trapped around rockslide corners"
+   },
+   {
+    "name": "Stronghold of Security (northeast room)",
+    "how": "Stronghold of Security entrance near Barbarian Village.",
+    "multi": false,
+    "cannon": false,
+    "note": "Good for AFK melee, no ranged safespots"
+   },
+   {
+    "name": "Catacombs of Kourend",
+    "how": "Kourend Catacombs entrance.",
+    "multi": true,
+    "cannon": false,
+    "note": "Burst/barrage works with stacking"
+   },
+   {
+    "name": "Forgotten Cemetery (Wilderness)",
+    "how": "Wilderness around level 30.",
+    "multi": false,
+    "cannon": false,
+    "note": "Safespot SW of coffins; beware PKers"
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Melee - crush, or Magic",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Slayer helmet",
+      "Crush weapon"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Slayer helmet (i)",
+      "Dwarf multicannon"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit only 8; judgement"
+  },
+  "tips": [
+   "No Slayer level needed",
+   "Undead: salve amulet works but does not stack with Slayer helmet",
+   "Dwarf multicannon allowed in Slayer Cave and Wilderness cave",
+   "Crush weapons match their style"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Ankou"
+ },
+ {
+  "id": "aviansie",
+  "name": "Aviansie",
+  "maxHit": 8,
+  "attackStyles": [
+   "ranged"
+  ],
+  "protectPrayer": null,
+  "weakness": "Wind spells (45%); low ranged defence",
+  "locations": [
+   {
+    "name": "God Wars Dungeon",
+    "how": "Needs 60 Strength or 60 Agility to enter; Armadyl-affiliated items stop aggression.",
+    "multi": true,
+    "cannon": false,
+    "note": "36 spawns; no cannon in multi-combat"
+   },
+   {
+    "name": "Wilderness God Wars Dungeon",
+    "how": "Wilderness north of Ferox area.",
+    "multi": true,
+    "cannon": false,
+    "note": "8 spawns; PvP risk"
+   }
+  ],
+  "mustBring": [
+   "Ranged weapon or magic (aviansie are too high to hit in melee)"
+  ],
+  "gear": {
+   "style": "Ranged",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Armadyl-affiliated items",
+      "Ranged weapon"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Armadyl armour",
+      "Strong ranged weapon"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit 8; judgement"
+  },
+  "tips": [
+   "Needs 'Watch the birdie' unlocked (80 slayer points)",
+   "Only salamanders or halberds can hit them in melee",
+   "Wiki recommends 80 Ranged and 70+ Defence",
+   "Wear Armadyl items to avoid aggression"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Aviansie"
+ },
+ {
+  "id": "basilisks",
+  "name": "Basilisks",
+  "maxHit": 5,
+  "attackStyles": [
+   "slash"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Earth spells (40%); crush weapons",
+  "locations": [
+   {
+    "name": "Jormungand's Prison",
+    "how": "Fremennik Slayer Dungeon area; Slayer ring -> Fremennik Slayer Dungeon.",
+    "multi": false,
+    "cannon": false,
+    "note": "12 spawns, better for tasks"
+   },
+   {
+    "name": "Fremennik Slayer Dungeon",
+    "how": "Slayer ring -> Fremennik Slayer Dungeon.",
+    "multi": false,
+    "cannon": false,
+    "note": "8 spawns; no cannon allowed"
+   }
+  ],
+  "mustBring": [
+   "Mirror shield or V's shield (blocks the stat-draining gaze)"
+  ],
+  "gear": {
+   "style": "Melee - crush, or Magic (earth)",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Mirror shield",
+      "Zombie axe"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "V's shield",
+      "Crush weapon"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit only 5; judgement"
+  },
+  "tips": [
+   "Needs 40 Defence and 40 Slayer",
+   "Unlock 'Basilocked' for 80 slayer points",
+   "Safespot from the southern entrance using the south-east wall",
+   "Bring a staff of fire for alching nature rune drops"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Basilisk"
+ },
+ {
+  "id": "black_demons",
+  "name": "Black demons",
+  "maxHit": 16,
+  "attackStyles": [
+   "slash"
+  ],
+  "protectPrayer": null,
+  "weakness": "Demonbane weapons; water magic (40%)",
+  "locations": [
+   {
+    "name": "Taverley Dungeon",
+    "how": "Taverley Dungeon, Taverley.",
+    "multi": false,
+    "cannon": false,
+    "note": "24 spawns, most accessible"
+   },
+   {
+    "name": "Chasm of Fire",
+    "how": "Chasm of Fire, Kourend.",
+    "multi": false,
+    "cannon": false,
+    "note": "16 spawns"
+   },
+   {
+    "name": "Catacombs of Kourend",
+    "how": "Kourend Catacombs entrance.",
+    "multi": true,
+    "cannon": false,
+    "note": "4 spawns"
+   },
+   {
+    "name": "Brimhaven Dungeon",
+    "how": "Brimhaven Dungeon, Karamja.",
+    "multi": false,
+    "cannon": false,
+    "note": "4 spawns"
+   },
+   {
+    "name": "Edgeville Dungeon (Wilderness)",
+    "how": "Edgeville Dungeon.",
+    "multi": false,
+    "cannon": false,
+    "note": "3 spawns"
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Melee with demonbane, or Ranged/Magic from a safespot",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Ranged or magic weapon for safespotting"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Demonbane weapon",
+      "Slayer helmet"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Max hit 16; judgement"
+  },
+  "tips": [
+   "Can be safespotted with Magic, Ranged or halberds in all locations",
+   "They are aggressive",
+   "30 second respawn",
+   "No Slayer level required"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Black_demon"
+ },
+ {
+  "id": "black_dragons",
+  "name": "Black dragons",
+  "maxHit": 50,
+  "attackStyles": [
+   "slash",
+   "dragonfire"
+  ],
+  "protectPrayer": null,
+  "weakness": "Water spells (50%)",
+  "locations": [
+   {
+    "name": "Taverley Dungeon (upper level)",
+    "how": "Taverley Dungeon, steps near entrance.",
+    "multi": false,
+    "cannon": false,
+    "note": "12 dragons"
+   },
+   {
+    "name": "Myths' Guild / Corsair Cove",
+    "how": "Needs Dragon Slayer II; closest to a bank.",
+    "multi": false,
+    "cannon": false,
+    "note": "2 dragons"
+   },
+   {
+    "name": "Evil Chicken's Lair",
+    "how": "Needs part of Recipe for Disaster.",
+    "multi": false,
+    "cannon": false,
+    "note": "4 dragons"
+   },
+   {
+    "name": "Wilderness Slayer Cave",
+    "how": "Wilderness; level 247 dragons.",
+    "multi": true,
+    "cannon": false,
+    "note": "3 dragons; limited protection"
+   }
+  ],
+  "mustBring": [
+   "Anti-dragon shield or dragonfire shield (reduces dragonfire up to 50)"
+  ],
+  "gear": {
+   "style": "Ranged or Magic from range",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Anti-dragon shield",
+      "Antifire potion"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Dragonfire shield",
+      "Super antifire potion"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "heavy",
+   "note": "Dragonfire up to 50, melee up to 21"
+  },
+  "tips": [
+   "Dragonfire only works at close range",
+   "Wiki suggests 80+ Ranged or equivalent melee",
+   "Many safespots exist",
+   "Antipoison advised at Lava Maze"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Black_dragon"
+ },
+ {
+  "id": "bloodveld",
+  "name": "Bloodveld",
+  "maxHit": 5,
+  "attackStyles": [
+   "magical melee"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Demonbane weapons",
+  "locations": [
+   {
+    "name": "Slayer Tower (1st/2nd floor, basement)",
+    "how": "Slayer ring -> Slayer Tower.",
+    "multi": false,
+    "cannon": false,
+    "note": "Multiple safespots"
+   },
+   {
+    "name": "Stronghold Slayer Cave",
+    "how": "Slayer ring -> Stronghold Slayer Cave.",
+    "multi": false,
+    "cannon": true,
+    "note": "Cannon safespot in NE section"
+   },
+   {
+    "name": "God Wars Dungeon",
+    "how": "Enter GWD.",
+    "multi": true,
+    "cannon": false,
+    "note": "19 spawns; safespots need god items"
+   },
+   {
+    "name": "Meiyerditch Laboratories",
+    "how": "Meiyerditch, Morytania.",
+    "multi": false,
+    "cannon": false,
+    "note": "4 spawns"
+   },
+   {
+    "name": "Wilderness God Wars Dungeon",
+    "how": "Wilderness.",
+    "multi": true,
+    "cannon": false,
+    "note": "5 spawns; rocks as safespots"
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Melee with demonbane, with magic defence",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Dragonhide armour",
+      "Slayer helmet"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Demonbane weapon",
+      "Slayer helmet (i)"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit only 5, but accurate; judgement"
+  },
+  "tips": [
+   "Wear magic defence gear, not melee defence",
+   "Bring nature runes to alch drops",
+   "Slayer Tower has many safespots",
+   "Protect from Melee nullifies damage"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Bloodveld"
+ },
+ {
+  "id": "blue_dragons",
+  "name": "Blue dragons",
+  "maxHit": 50,
+  "attackStyles": [
+   "slash",
+   "dragonfire"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Water spells",
+  "locations": [
+   {
+    "name": "Taverley Dungeon",
+    "how": "Taverley Dungeon; dusty key or 70 Agility.",
+    "multi": false,
+    "cannon": false,
+    "note": "21 spawns"
+   },
+   {
+    "name": "Ogre Enclave",
+    "how": "Needs Watchtower.",
+    "multi": false,
+    "cannon": false,
+    "note": "6 spawns with safespots"
+   },
+   {
+    "name": "Heroes' Guild",
+    "how": "Needs Heroes' Quest.",
+    "multi": false,
+    "cannon": false,
+    "note": "1 spawn, easy safespot"
+   },
+   {
+    "name": "Isle of Souls Dungeon",
+    "how": "Isle of Souls.",
+    "multi": false,
+    "cannon": false,
+    "note": "4 spawns, safespots"
+   }
+  ],
+  "mustBring": [
+   "Anti-dragon shield or dragonfire shield, plus antifire potion (dragonfire up to 50)"
+  ],
+  "gear": {
+   "style": "Melee or safespot",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Anti-dragon shield",
+      "Antifire potion"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Dragonfire shield",
+      "Super antifire potion"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Melee up to 10, dragonfire 50 without protection"
+  },
+  "tips": [
+   "Shield plus antifire plus Protect from Melee negates all damage",
+   "Safespotting removes need for protection",
+   "Super antifire lets you use a better shield",
+   "Aggressive"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Blue_dragon"
+ },
+ {
+  "id": "brine_rats",
+  "name": "Brine rats",
+  "maxHit": 9,
+  "attackStyles": [
+   "stab"
+  ],
+  "protectPrayer": null,
+  "weakness": "Low Defence; rat bone weapons",
+  "locations": [
+   {
+    "name": "Brine Rat Cavern",
+    "how": "Near Rellekka; dig in with a spade.",
+    "multi": false,
+    "cannon": false,
+    "note": "Safespots at SE black bones and NW corner"
+   }
+  ],
+  "mustBring": [
+   "Spade (to enter Brine Rat Cavern)"
+  ],
+  "gear": {
+   "style": "Melee",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Rat bone weapon"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Rat bone weapon",
+      "Bones to Peaches tablets"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Max hit 9; bring food if under about 70 Defence"
+  },
+  "tips": [
+   "Needs 47 Slayer and Olaf's Quest",
+   "Rat bone weapons add +10 damage",
+   "Bones to Peaches converts bone drops to food",
+   "Brine sabre 1/512"
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Brine_rat"
+ }
+]

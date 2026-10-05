@@ -645,7 +645,7 @@ class MainActivity : Activity() {
         val sub = Ui.text(
             this,
             "HP and prayer warnings, farming timers" + (if (farm.isNotEmpty()) " (${farm.size} growing)" else "") +
-                ", kill counts and pet odds, finding you on the minimap, and Sailing.",
+                ", kill counts and pet odds, finding you on the minimap, Sailing, and Slayer.",
             12f,
             Ui.TAN
         )
@@ -667,6 +667,7 @@ class MainActivity : Activity() {
         l3.leftMargin = Ui.dp(this, 8)
         row2.addView(open("Sailing", com.questoverlay.sailing.SailingActivity::class.java), l3)
         c.addView(spaced(row2, 8))
+        c.addView(spaced(open("Slayer", com.questoverlay.slayer.SlayerActivity::class.java), 8))
         c.addView(spaced(open("Warnings & settings", com.questoverlay.capture.CoachSettingsActivity::class.java), 8))
         return c
     }

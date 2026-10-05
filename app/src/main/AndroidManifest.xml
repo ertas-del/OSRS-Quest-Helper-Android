@@ -59,6 +59,7 @@
         <activity android:name=".farming.FarmingActivity" android:exported="false" android:label="Farming timers" />
         <activity android:name=".location.WhereActivity" android:exported="false" android:label="Where am I" />
         <activity android:name=".sailing.SailingActivity" android:exported="false" android:label="Sailing" />
+        <activity android:name=".slayer.SlayerActivity" android:exported="false" android:label="Slayer" />
 
         <!-- Posts "ready to harvest" notifications, and restores the alarms after a restart. -->
         <receiver android:name=".farming.FarmingAlarmReceiver" android:exported="false">

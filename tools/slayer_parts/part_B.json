@@ -1,0 +1,696 @@
+[
+ {
+  "id": "dagannoth",
+  "name": "Dagannoth",
+  "maxHit": 10,
+  "attackStyles": [
+   "ranged",
+   "melee"
+  ],
+  "protectPrayer": null,
+  "weakness": "Earth spells (35%)",
+  "locations": [
+   {
+    "name": "Lighthouse",
+    "how": "Fairy ring ALP, after Horror from the Deep. Multicombat.",
+    "multi": true,
+    "cannon": true,
+    "note": "22 spawns; level 74 ones use ranged, level 92 use melee"
+   },
+   {
+    "name": "Jormungand's Prison",
+    "how": "Fremennik area, needs The Fremennik Exiles quest.",
+    "multi": null,
+    "cannon": null,
+    "note": "62 spawns"
+   },
+   {
+    "name": "Catacombs of Kourend (south)",
+    "how": "Enter the Catacombs of Kourend and head to the southern section.",
+    "multi": null,
+    "cannon": false,
+    "note": "14 spawns; no cannon allowed"
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Melee or ranged (judgement); Earth spells also work",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Abyssal whip",
+      "Fire cape",
+      "Barrows gloves"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Scythe of Vitur",
+      "Torva armour",
+      "Infernal cape"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit 10 and wiki calls them weak for their level; judgement on food."
+  },
+  "tips": [
+   "Lighthouse is multicombat so a cannon works well there.",
+   "No Slayer level needed.",
+   "Cannon cannot be used in the Catacombs."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Dagannoth"
+ },
+ {
+  "id": "dust_devils",
+  "name": "Dust devils",
+  "maxHit": 8,
+  "attackStyles": [
+   "melee (rolls against ranged defence)"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Air spells (35%)",
+  "locations": [
+   {
+    "name": "Catacombs of Kourend (south-east)",
+    "how": "Fairy ring or teleport to Kourend, then enter the Catacombs. Multicombat with a safespot across water.",
+    "multi": true,
+    "cannon": false,
+    "note": "13 spawns; no cannon"
+   },
+   {
+    "name": "Smoke Dungeon",
+    "how": "Needs Desert Treasure I started; Pollnivneach area. Task area is single-combat, multicombat area to the west.",
+    "multi": true,
+    "cannon": false,
+    "note": "44 spawns; no cannon in task area"
+   },
+   {
+    "name": "Wilderness Slayer Cave",
+    "how": "North-east quadrant, Wilderness levels 25-28; entrance at level 29.",
+    "multi": true,
+    "cannon": true,
+    "note": "9 spawns; PvP risk, bring only what you can lose"
+   }
+  ],
+  "mustBring": [
+   "Facemask, Slayer helmet or Slayer helmet (i) (without it they always hit 16 and drain stats)"
+  ],
+  "gear": {
+   "style": "Magic - barrage in multicombat; or ranged/melee",
+   "tiers": [
+    {
+     "label": "Melee",
+     "items": [
+      "Slayer helmet",
+      "Torva platebody",
+      "Torva platelegs",
+      "Hallowfell"
+     ]
+    },
+    {
+     "label": "Ranged",
+     "items": [
+      "Slayer helmet (i)",
+      "Masori armor",
+      "Venator bow",
+      "Amethyst arrows"
+     ]
+    },
+    {
+     "label": "Magic",
+     "items": [
+      "Slayer helmet (i)",
+      "Virtus robes",
+      "Kodai wand",
+      "Elidinis' ward (f)"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit 8 with facemask; Protect from Melee helps."
+  },
+  "tips": [
+   "Attacks roll on your ranged defence.",
+   "Bring prayer potions and a rune pouch with water, blood, death runes for barraging.",
+   "Bracelet of slaughter or expeditious bracelet help."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Dust_devil"
+ },
+ {
+  "id": "fire_giants",
+  "name": "Fire giants",
+  "maxHit": 11,
+  "attackStyles": [
+   "slash"
+  ],
+  "protectPrayer": null,
+  "weakness": "Water spells (100%)",
+  "locations": [
+   {
+    "name": "Waterfall Dungeon",
+    "how": "Waterfall Dungeon near Baxtorian Falls.",
+    "multi": false,
+    "cannon": false,
+    "note": "11 spawns, good safespots"
+   },
+   {
+    "name": "Karuulm Slayer Dungeon",
+    "how": "Karuulm Slayer Dungeon, Mount Karuulm.",
+    "multi": null,
+    "cannon": null,
+    "note": "13 spawns, largest concentration"
+   },
+   {
+    "name": "Stronghold Slayer Dungeon",
+    "how": "Stronghold Slayer Cave.",
+    "multi": null,
+    "cannon": null,
+    "note": "12 spawns"
+   },
+   {
+    "name": "Catacombs of Kourend",
+    "how": "Enter the Catacombs of Kourend.",
+    "multi": null,
+    "cannon": false,
+    "note": "12 spawns"
+   },
+   {
+    "name": "Brimhaven Dungeon",
+    "how": "Brimhaven, entry fee required.",
+    "multi": null,
+    "cannon": null,
+    "note": "5-8 spawns"
+   },
+   {
+    "name": "Charred Dungeon",
+    "how": "Only multicombat spawns; suitable for cannon.",
+    "multi": true,
+    "cannon": true,
+    "note": null
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Melee - slash, or water spells (judgement)",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Abyssal whip",
+      "Fire cape",
+      "Barrows gloves"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Scythe of Vitur",
+      "Torva armour",
+      "Infernal cape"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit only 11; judgement on food."
+  },
+  "tips": [
+   "100% weakness to water spells.",
+   "Waterfall Dungeon has good safespots.",
+   "Rune scimitar drop (1/128)."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Fire_giant"
+ },
+ {
+  "id": "fossil_island_wyverns",
+  "name": "Fossil Island Wyverns",
+  "maxHit": null,
+  "attackStyles": [
+   "slash",
+   "ranged",
+   "icy breath"
+  ],
+  "protectPrayer": null,
+  "weakness": "Air spells (ancient 35%, spitting 25%); dragonbane weapons",
+  "locations": [
+   {
+    "name": "Wyvern Cave (northern, task-only)",
+    "how": "Digsite pendant to Fossil Island, Magic Mushtree to Mushroom Meadow, run south to the trapdoor in the Mushroom Forest. Needs Bone Voyage.",
+    "multi": false,
+    "cannon": false,
+    "note": "No cannon; fungi eat it"
+   }
+  ],
+  "mustBring": [
+   "Elemental, mind, dragonfire ward, dragonfire or ancient wyvern shield (cuts icy breath from 44 to 10; Anti-dragon shield does not work)",
+   "66 Slayer to damage wyverns (82 for ancient)"
+  ],
+  "gear": {
+   "style": "Defensive armour; melee/ranged/magic with dragonbane weapons helping",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Elemental shield",
+      "Abyssal whip",
+      "Fire cape"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Dragonfire ward",
+      "Scythe of Vitur",
+      "Torva armour"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "heavy",
+   "note": "Ancient wyvern icy breath hits up to 44 without shield, slash 16; wiki lists spitting breath 50+."
+  },
+  "tips": [
+   "Icy breath ignores prayers.",
+   "Ancient wyverns need Protect from Melee after de-aggroing them.",
+   "Use defensive armour rather than offensive."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Wyvern_Cave"
+ },
+ {
+  "id": "gargoyles",
+  "name": "Gargoyles",
+  "maxHit": 11,
+  "attackStyles": [
+   "slash"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Earth spells (40%); golembane weapons",
+  "locations": [
+   {
+    "name": "Slayer Tower (top floor)",
+    "how": "Slayer ring to the Slayer Tower, climb stairs to the top floor, past the aberrant spectres.",
+    "multi": false,
+    "cannon": false,
+    "note": "8 spawns; safespot at the south-west doorway"
+   },
+   {
+    "name": "Slayer Tower (basement)",
+    "how": "Slayer Tower, go down to the basement; task-only (Raulyn blocks off-task).",
+    "multi": false,
+    "cannon": false,
+    "note": "12 spawns; safespot NE corner behind an immovable bucket; immune to poison"
+   }
+  ],
+  "mustBring": [
+   "Rock hammer, rock thrownhammer or granite hammer (to finish them at 8 HP or less)",
+   "Slayer helmet or nose peg (aberrant spectres on the way to the top floor)"
+  ],
+  "gear": {
+   "style": "Melee - slash (judgement); Earth spells also work",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Abyssal whip",
+      "Fire cape",
+      "Barrows gloves"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Scythe of Vitur",
+      "Torva armour",
+      "Infernal cape"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Max hit 11; judgement on food."
+  },
+  "tips": [
+   "Gargoyle Smasher perk (120 points) auto-smashes at 9 HP if you carry a rock hammer.",
+   "Granite hammer finishes automatically.",
+   "Bring High Level Alchemy runes."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Gargoyle"
+ },
+ {
+  "id": "greater_demons",
+  "name": "Greater demons",
+  "maxHit": 9,
+  "attackStyles": [
+   "slash"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Water spells (40%)",
+  "locations": [
+   {
+    "name": "Chasm of Fire",
+    "how": "Chasm of Fire, Kourend.",
+    "multi": null,
+    "cannon": null,
+    "note": "17 spawns"
+   },
+   {
+    "name": "Brimhaven Dungeon",
+    "how": "Brimhaven, entry fee.",
+    "multi": null,
+    "cannon": null,
+    "note": "7 spawns; safespot at end of a vine NW of the stairs"
+   },
+   {
+    "name": "Karuulm Slayer Dungeon",
+    "how": "Karuulm Slayer Dungeon.",
+    "multi": null,
+    "cannon": null,
+    "note": "9 spawns"
+   },
+   {
+    "name": "Catacombs of Kourend",
+    "how": "Enter the Catacombs.",
+    "multi": null,
+    "cannon": false,
+    "note": "10 spawns"
+   },
+   {
+    "name": "Wilderness Slayer Cave",
+    "how": "Wilderness Slayer Cave.",
+    "multi": null,
+    "cannon": null,
+    "note": "10 spawns; PvP risk"
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Melee or ranged/magic safespot (judgement)",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Abyssal whip",
+      "Fire cape",
+      "Barrows gloves"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Scythe of Vitur",
+      "Torva armour",
+      "Infernal cape"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit 9; judgement on food."
+  },
+  "tips": [
+   "Protect from Melee needs 43 Prayer.",
+   "Safespots exist at several locations.",
+   "Drops rune full helm and hard clues."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Greater_demon"
+ },
+ {
+  "id": "hellhounds",
+  "name": "Hellhounds",
+  "maxHit": 11,
+  "attackStyles": [
+   "stab"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Water spells (50%); demonbane weapons",
+  "locations": [
+   {
+    "name": "Taverley Dungeon",
+    "how": "Taverley Dungeon.",
+    "multi": null,
+    "cannon": true,
+    "note": "13 spawns"
+   },
+   {
+    "name": "Stronghold Slayer Cave",
+    "how": "Stronghold Slayer Cave.",
+    "multi": null,
+    "cannon": true,
+    "note": "13 spawns, task-only"
+   },
+   {
+    "name": "Catacombs of Kourend",
+    "how": "Enter the Catacombs.",
+    "multi": null,
+    "cannon": false,
+    "note": "9 spawns"
+   },
+   {
+    "name": "Witchaven Dungeon",
+    "how": "Witchaven, Kandarin.",
+    "multi": null,
+    "cannon": null,
+    "note": "8 spawns"
+   }
+  ],
+  "mustBring": [],
+  "gear": {
+   "style": "Melee with demonbane (judgement)",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Abyssal whip",
+      "Fire cape",
+      "Barrows gloves"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Scythe of Vitur",
+      "Torva armour",
+      "Infernal cape"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Max hit 11, 116 HP; judgement on food."
+  },
+  "tips": [
+   "Aggressive.",
+   "Hard clue drop 1/64.",
+   "2x2 so cannon works in most locations."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Hellhound"
+ },
+ {
+  "id": "jellies",
+  "name": "Jellies",
+  "maxHit": 5,
+  "attackStyles": [
+   "magic melee"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Earth spells (35%)",
+  "locations": [
+   {
+    "name": "Fremennik Slayer Dungeon",
+    "how": "Slayer ring to the cave exit, or fairy ring AJR; entrance SE of Rellekka.",
+    "multi": null,
+    "cannon": null,
+    "note": "10 spawns; safespot at the southern rockfall"
+   },
+   {
+    "name": "Wilderness Slayer Cave",
+    "how": "Wilderness Slayer Cave.",
+    "multi": null,
+    "cannon": false,
+    "note": "14 spawns; cannons don't work; PvP risk"
+   },
+   {
+    "name": "Ynysdail Cavern",
+    "how": "Ynysdail.",
+    "multi": null,
+    "cannon": null,
+    "note": "9 spawns"
+   }
+  ],
+  "mustBring": [
+   "52 Slayer to kill them"
+  ],
+  "gear": {
+   "style": "Melee with high magic defence armour such as dragonhide",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Abyssal whip",
+      "Fire cape",
+      "Green d'hide body"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Scythe of Vitur",
+      "Torva armour",
+      "Infernal cape"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "light",
+   "note": "Max hit only 5."
+  },
+  "tips": [
+   "Wear high magic defence, not metal armour.",
+   "Protect from Melee blocks all damage.",
+   "Safespot at corner rocks in the western area."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Jelly"
+ },
+ {
+  "id": "kalphite",
+  "name": "Kalphite",
+  "maxHit": 12,
+  "attackStyles": [
+   "crush"
+  ],
+  "protectPrayer": null,
+  "weakness": "Fire spells (40%); crush weapons",
+  "locations": [
+   {
+    "name": "Kalphite Cave",
+    "how": "Desert amulet 4, or fairy ring BIQ and run NE. Task-only. No rope needed.",
+    "multi": true,
+    "cannon": true,
+    "note": "Workers 18, soldiers 20, guardians 5 spawns"
+   },
+   {
+    "name": "Kalphite Lair",
+    "how": "Rope needed. South of Shantay Pass/Al Kharid, or via fairy ring BIQ.",
+    "multi": true,
+    "cannon": true,
+    "note": "No task required; workers 13, soldiers 7, guardians 4 spawns"
+   }
+  ],
+  "mustBring": [
+   "Rope (to enter Kalphite Lair)",
+   "Antipoison (soldiers and guardians poison)"
+  ],
+  "gear": {
+   "style": "Melee - crush (judgement); keris effective",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Abyssal whip",
+      "Fire cape",
+      "Barrows gloves"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Scythe of Vitur",
+      "Torva armour",
+      "Infernal cape"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Guardians hit 12; poison applies through Protect from Melee; judgement."
+  },
+  "tips": [
+   "Keris and variants work on all kalphites.",
+   "Antidote++ recommended.",
+   "Cannon in their chamber gives a very good XP rate."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Kalphite"
+ },
+ {
+  "id": "kurask",
+  "name": "Kurask",
+  "maxHit": 11,
+  "attackStyles": [
+   "crush"
+  ],
+  "protectPrayer": "Protect from Melee",
+  "weakness": "Slash/crush defence is +20; no elemental weakness stated",
+  "locations": [
+   {
+    "name": "Fremennik Slayer Dungeon",
+    "how": "Slayer ring to the cave exit, or fairy ring AJR.",
+    "multi": false,
+    "cannon": false,
+    "note": "9 spawns task-only; cannons don't work"
+   },
+   {
+    "name": "Iorwerth Dungeon",
+    "how": "Iorwerth Dungeon.",
+    "multi": null,
+    "cannon": false,
+    "note": "14 spawns"
+   },
+   {
+    "name": "Kurask Lair",
+    "how": "Kurask Lair.",
+    "multi": null,
+    "cannon": false,
+    "note": "8 spawns"
+   }
+  ],
+  "mustBring": [
+   "Leaf-bladed weapon, broad arrows/bolts, or Magic Dart (only these damage them)",
+   "70 Slayer to kill them"
+  ],
+  "gear": {
+   "style": "Leaf-bladed melee, broad ammo or Magic Dart",
+   "tiers": [
+    {
+     "label": "Budget",
+     "items": [
+      "Leaf-bladed sword",
+      "Fire cape",
+      "Barrows gloves"
+     ]
+    },
+    {
+     "label": "Best",
+     "items": [
+      "Leaf-bladed battleaxe",
+      "Torva armour",
+      "Infernal cape"
+     ]
+    }
+   ]
+  },
+  "food": {
+   "amount": "moderate",
+   "note": "Max hit 11 but inaccurate; judgement."
+  },
+  "tips": [
+   "Safespots exist at each location.",
+   "Regenerate 1 HP every 5 ticks.",
+   "Immune to poison, venom, thralls."
+  ],
+  "source": "https://oldschool.runescape.wiki/w/Kurask"
+ }
+]
