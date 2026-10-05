@@ -63,6 +63,7 @@ import com.questoverlay.location.LocatorStore
 import com.questoverlay.location.Pixels
 import com.questoverlay.location.WorldMaps
 import com.questoverlay.sailing.NavTarget
+import com.questoverlay.sailing.SailPlanner
 import com.questoverlay.sailing.SailingData
 import com.questoverlay.sailing.SailingStore
 import android.os.Handler
@@ -153,6 +154,7 @@ class OverlayService : Service() {
     private var liveLabel: TextView? = null
     private var navCompass: CompassView? = null
     private var navLabel: TextView? = null
+    private var sailPicker = false
 
     private val watching: Boolean get() = watcher?.running == true
 
@@ -716,19 +718,83 @@ class OverlayService : Service() {
     /** Sailing routes: on reaching a waypoint, aim at the next one. Returns true if the target changed. */
     private fun advanceNav(f: Fix): Boolean {
         val t = sailing.target ?: return false
-        if (t.routeKey.isEmpty() || f.distanceTo(t.x, t.y) > 6) return false
+        if (t.routeKey.isEmpty() || f.distanceTo(t.x, t.y) > SailPlanner.ARRIVE) return false
+        return stepRoute(1, spoken = true)
+    }
+
+    /** Move the route target [delta] waypoints on (or back). Returns true if the target changed. */
+    private fun stepRoute(delta: Int, spoken: Boolean = false): Boolean {
+        val t = sailing.target ?: return false
+        if (t.routeKey.isEmpty()) return false
         val (from, to) = t.routeKey.split('>').let { (it.getOrNull(0) ?: "") to (it.getOrNull(1) ?: "") }
-        val route = try { SailingData.load(this).routes.firstOrNull { it.from == from && it.to == to } } catch (e: Exception) { null } ?: return false
-        val next = sailing.routeIndex + 1
+        val pts = try { SailPlanner.points(SailingData.load(this).routes, from, to) } catch (e: Exception) { null } ?: return false
+        val next = (sailing.routeIndex + delta).coerceIn(1, pts.size)
+        if (next == sailing.routeIndex) return false
         sailing.routeIndex = next
-        sailing.target = if (next < route.points.size) {
-            val p = route.points[next]
-            NavTarget("$to (waypoint $next of ${route.points.size - 1})", p.first, p.second, routeKey = t.routeKey)
-        } else {
-            NavTarget("$to (arrived)", route.points.last().first, route.points.last().second)
-        }
-        speaker.say(if (next < route.points.size) "Next waypoint" else "Arrived")
+        sailing.target = SailPlanner.target(to, from, pts, next)
+        if (spoken) speaker.say(if (next < pts.size) "Next waypoint" else "Arrived")
         return true
+    }
+
+    /** Start sailing a route from the picker: join it at the waypoint ahead of where you are (or the start). */
+    private fun startRoute(from: String, to: String) {
+        val pts = try { SailPlanner.points(SailingData.load(this).routes, from, to) } catch (e: Exception) { null } ?: return
+        val f = fix?.takeIf { System.currentTimeMillis() - it.at < 60_000 }
+        val i = if (f != null && pointable(f, pts[0].first, pts[0].second)) SailPlanner.firstTarget(pts, f.tileX, f.tileY) else 1
+        sailing.routeIndex = i
+        sailing.target = SailPlanner.target(to, from, pts, i)
+        sailPicker = false
+        render()
+    }
+
+    /** The ⛵ list inside the card: every sailing route, both ways, in a scrolling box. Nearest port's routes first. */
+    private fun buildSailPicker(): View? {
+        if (!sailPicker) return null
+        val data = try { SailingData.load(this) } catch (e: Exception) { return null }
+        val level = TravelStore(this).levels["Sailing"]
+        val f = fix?.takeIf { System.currentTimeMillis() - it.at < 60_000 }
+        val here = f?.let { SailPlanner.nearestPort(data.ports, it.tileX, it.tileY) }?.takeIf { it.second <= 150 }?.first?.name
+        val levelOf = data.ports.associate { it.name to it.level }
+        val all = data.routes.flatMap { listOf(it.from to it.to, it.to to it.from) }.distinct()
+        val sorted = all.sortedWith(compareBy({ if (it.first == here) 0 else 1 }, { it.first }, { it.second }))
+
+        val box = LinearLayout(this)
+        box.orientation = LinearLayout.VERTICAL
+        val p = Ui.dp(this, 6)
+        box.setPadding(p, p, p, p)
+        box.background = Ui.rounded(this, Ui.STONE_DARK, 4, Ui.STROKE, 1)
+
+        val head = LinearLayout(this)
+        head.orientation = LinearLayout.HORIZONTAL
+        head.gravity = Gravity.CENTER_VERTICAL
+        val title = Ui.text(this, if (here != null) "⛵ Routes · you're near $here" else "⛵ Sailing routes", 13f, Ui.GOLD, bold = true)
+        head.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        head.addView(iconButton("✕") { sailPicker = false; render() })
+        box.addView(head)
+
+        val list = LinearLayout(this)
+        list.orientation = LinearLayout.VERTICAL
+        for ((from, to) in sorted) {
+            val pts = SailPlanner.points(data.routes, from, to) ?: continue
+            val need = levelOf[to]
+            val locked = level != null && need != null && level < need
+            val row = LinearLayout(this)
+            row.orientation = LinearLayout.VERTICAL
+            row.setPadding(Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6))
+            val name = Ui.text(this, "$from → $to", 13f, if (from == here) Ui.GREEN else if (locked) Ui.MUTED else Ui.TEXT, bold = true)
+            row.addView(name)
+            row.addView(Ui.text(this, "${pts.size - 1} waypoints" + (if (need != null) " · Sailing $need" else "") + (if (locked) " 🔒" else ""), 11f, Ui.MUTED))
+            row.setOnClickListener { startRoute(from, to) }
+            list.addView(row)
+        }
+        val scroll = ScrollView(this)
+        scroll.addView(list)
+        box.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 190)))
+
+        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lp.topMargin = Ui.dp(this, 6)
+        box.layoutParams = lp
+        return box
     }
 
     /** The minimap fix only makes sense for targets on the same map (surface vs Prifddinas). */
@@ -801,6 +867,10 @@ class OverlayService : Service() {
             col.addView(done)
         }
         row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        if (t.routeKey.isNotEmpty()) {
+            row.addView(iconButton("\u2039") { if (stepRoute(-1)) render() })
+            row.addView(iconButton("\u203A") { if (stepRoute(1)) render() })
+        }
         row.addView(iconButton("\u2715") {
             sailing.target = null
             render()
@@ -966,6 +1036,7 @@ class OverlayService : Service() {
         card.addView(buildHeader(q, step))
         buildAlertBanner()?.let { card.addView(it) }
         buildNavStrip()?.let { card.addView(it) }
+        buildSailPicker()?.let { card.addView(it) }
         card.addView(buildProgress(q, step))
         when {
             mode == Mode.ITEMS -> card.addView(buildItems(q))
@@ -980,7 +1051,7 @@ class OverlayService : Service() {
     }
 
     private fun iconButton(label: String, onClick: () -> Unit): TextView {
-        val size = Ui.dp(this, 32)
+        val size = Ui.dp(this, 30)
         val t = Ui.text(this, label, 18f, Ui.GOLD, bold = true)
         t.gravity = Gravity.CENTER
         t.background = Ui.stoneButton(this)
@@ -1016,6 +1087,10 @@ class OverlayService : Service() {
         eye.alpha = if (watching) 1f else 0.45f
         eye.contentDescription = if (watching) "Auto-check on" else "Auto-check off"
         row.addView(eye)
+        val sail = iconButton("\u26F5") { sailPicker = !sailPicker; render() }
+        sail.alpha = if (sailPicker || sailing.target != null) 1f else 0.45f
+        sail.contentDescription = "Sailing routes"
+        row.addView(sail)
         val voice = iconButton(if (speaker.muted) "\uD83D\uDD07" else "\uD83D\uDD0A") {
             speaker.muted = !speaker.muted
             render()
