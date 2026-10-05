@@ -15,6 +15,12 @@ android {
         val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
         versionCode = run
         versionName = "0.2.$run"
+
+        // Only modern 64-bit ARM phones (like the S26). The text reader's engine is ~11 MB per
+        // chip type, so bundling all four made the APK 45 MB.
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     // A fixed debug key (committed on purpose) so every build is signed the same way
