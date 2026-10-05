@@ -27,6 +27,10 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import com.questoverlay.account.Advisor
+import com.questoverlay.capture.AlertRule
+import com.questoverlay.capture.AlertStore
+import com.questoverlay.capture.Alerter
+import com.questoverlay.capture.BuiltInAlerts
 import com.questoverlay.capture.CaptureLog
 import com.questoverlay.travel.TravelMode
 import com.questoverlay.travel.TravelStore
@@ -37,7 +41,7 @@ class MainActivity : Activity() {
 
     private lateinit var store: ProgressStore
     private enum class Filter(val label: String) {
-        ALL("All"), FREE("Free"), MEMBERS("Members"), MINI("Mini"), STARTED("Started")
+        ALL("Quests"), FREE("Free"), MEMBERS("Members"), MINI("Mini"), DIARIES("Diaries")
     }
 
     private lateinit var travel: TravelStore
@@ -51,6 +55,7 @@ class MainActivity : Activity() {
     private val cards = ArrayList<Pair<Quest, View>>()
     private val searchNames = HashMap<String, String>()
     private lateinit var noMatches: TextView
+    private lateinit var listHeading: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,9 +125,11 @@ class MainActivity : Activity() {
         content.setPadding(pad, pad, pad, pad)
 
         content.addView(Ui.text(this, "Breadcrumbs", 28f, Ui.GOLD, bold = true))
+        val diaryCount = quests.count { it.isDiary }
         val intro = Ui.text(
             this,
-            "${quests.size} quests and miniquests. It never touches the game: you tick steps off yourself.",
+            "${quests.size - diaryCount} quests and miniquests, and all $diaryCount achievement diary tiers. " +
+                "It never touches the game: it only reads the screen when you switch on \uD83D\uDC41.",
             13f,
             Ui.TAN
         )
@@ -138,6 +145,8 @@ class MainActivity : Activity() {
         content.addView(opacityCard())
         content.addView(travelCard())
         content.addView(autoCheckCard())
+        content.addView(coachCard())
+        content.addView(alertsCard())
 
         content.addView(spaced(Ui.button(this, "Open Old School RuneScape", false) { launchGame() }, 12))
         if (OverlayService.running) {
@@ -148,16 +157,15 @@ class MainActivity : Activity() {
         headingRow.orientation = LinearLayout.HORIZONTAL
         headingRow.gravity = Gravity.BOTTOM
         headingRow.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 6))
-        headingRow.addView(
-            Ui.text(this, "Quests", 18f, Ui.TEXT, bold = true),
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        )
+        listHeading = Ui.text(this, if (filter == Filter.DIARIES) "Achievement diaries" else "Quests", 18f, Ui.TEXT, bold = true)
+        headingRow.addView(listHeading, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         countLabel = Ui.text(this, "", 12f, Ui.MUTED)
         headingRow.addView(countLabel)
         content.addView(headingRow)
 
         content.addView(searchBox())
         content.addView(filterRow())
+        content.addView(toggleRow())
 
         // The quest list scrolls inside its own box, so the page doesn't turn into one long scroll.
         // Reaching the top or bottom of the box hands the scroll back to the page (nested scrolling).
@@ -208,7 +216,7 @@ class MainActivity : Activity() {
 
     private fun searchBox(): View {
         val box = EditText(this)
-        box.hint = "Search quests"
+        box.hint = "Search quests and diaries"
         box.setText(query)
         box.setSelection(box.text.length)
         box.setSingleLine(true)
@@ -258,6 +266,43 @@ class MainActivity : Activity() {
         return row
     }
 
+    /** "In progress" and "Hide done": switched on and off with a tap, remembered between visits. */
+    private fun toggleRow(): View {
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lp.topMargin = Ui.dp(this, 4)
+        row.layoutParams = lp
+        fun toggle(label: String, on: () -> Boolean, set: (Boolean) -> Unit): TextView {
+            val chip = Ui.chip(this, "", false)
+            fun style() {
+                val active = on()
+                chip.text = (if (active) "\u2713 " else "") + label
+                chip.setTextColor(if (active) Ui.TAN else Ui.GOLD)
+                chip.background = Ui.stoneButton(this, down = active)
+            }
+            style()
+            chip.setOnClickListener {
+                set(!on())
+                style()
+                filterChanged()
+            }
+            return chip
+        }
+        row.addView(toggle("In progress", { store.startedOnly }, { store.startedOnly = it }),
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val hlp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        hlp.leftMargin = Ui.dp(this, 4)
+        row.addView(toggle("Hide done", { store.hideDone }, { store.hideDone = it }), hlp)
+        return row
+    }
+
+    /** Finished in Breadcrumbs, marked done, or (diaries) complete according to WikiSync. */
+    private fun isDone(q: Quest): Boolean {
+        if (store.stepIndex(q) >= q.steps.size || travel.isQuestDone(q.name)) return true
+        return q.isDiary && travel.diaryTier(q.region, q.tier)?.complete == true
+    }
+
     private fun styleChips(chips: List<TextView>) {
         for ((i, chip) in chips.withIndex()) {
             val active = Filter.entries[i] == filter
@@ -266,20 +311,26 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun inTab(q: Quest): Boolean = when (filter) {
+        Filter.ALL -> !q.isDiary
+        Filter.FREE -> q.type == "Free"
+        Filter.MEMBERS -> q.type == "Members"
+        Filter.MINI -> q.type == "Miniquest"
+        Filter.DIARIES -> q.isDiary
+    }
+
     private fun matches(q: Quest): Boolean {
-        val step = store.stepIndex(q)
-        val ok = when (filter) {
-            Filter.ALL -> true
-            Filter.FREE -> q.type == "Free"
-            Filter.MEMBERS -> q.type == "Members"
-            Filter.MINI -> q.type == "Miniquest"
-            Filter.STARTED -> step > 0
-        }
-        if (!ok) return false
+        if (!inTab(q)) return false
+        val done = isDone(q)
+        if (store.hideDone && done) return false
+        if (store.startedOnly && (done || store.stepIndex(q) == 0)) return false
         val text = query.trim()
         if (text.isEmpty()) return true
         val needle = normalise(text)
-        val hay = searchNames.getOrPut(q.id) { normalise(q.name) }
+        val hay = searchNames.getOrPut(q.id) {
+            // Diaries can also be found by their tasks ("fishing trawler").
+            normalise(if (q.isDiary) q.name + " " + q.steps.joinToString(" ") { it.section } else q.name)
+        }
         return hay.contains(needle)
     }
 
@@ -307,7 +358,7 @@ class MainActivity : Activity() {
             cards.add(q to card)
             listContainer.addView(card)
         }
-        noMatches = Ui.text(this, "No quests match.", 14f, Ui.MUTED)
+        noMatches = Ui.text(this, "Nothing matches.", 14f, Ui.MUTED)
         noMatches.setPadding(0, Ui.dp(this, 12), 0, 0)
         listContainer.addView(noMatches)
         applyFilter()
@@ -315,14 +366,25 @@ class MainActivity : Activity() {
 
     private fun applyFilter() {
         var shown = 0
+        var inTab = 0
+        var doneInTab = 0
         for ((q, card) in cards) {
             val show = matches(q)
             card.visibility = if (show) View.VISIBLE else View.GONE
             if (show) shown++
+            if (inTab(q)) {
+                inTab++
+                if (isDone(q)) doneInTab++
+            }
         }
-        if (::noMatches.isInitialized) noMatches.visibility = if (shown > 0) View.GONE else View.VISIBLE
+        val noun = if (filter == Filter.DIARIES) "tiers" else "quests"
+        if (::noMatches.isInitialized) {
+            noMatches.text = if (store.hideDone && doneInTab == inTab && inTab > 0) "All done here \u2713" else "Nothing matches."
+            noMatches.visibility = if (shown > 0) View.GONE else View.VISIBLE
+        }
+        if (::listHeading.isInitialized) listHeading.text = if (filter == Filter.DIARIES) "Achievement diaries" else "Quests"
         if (::countLabel.isInitialized) {
-            countLabel.text = if (shown == cards.size) "${cards.size} quests" else "$shown of ${cards.size}"
+            countLabel.text = (if (shown == inTab) "$inTab $noun" else "$shown of $inTab $noun") + " \u00B7 $doneInTab done"
         }
     }
 
@@ -429,14 +491,16 @@ class MainActivity : Activity() {
         if (isActive) c.background = Ui.rounded(this, Ui.CARD_BG, 14, Ui.GOLD, 2)
 
         // Same colours as the in-game quest list: red not started, yellow in progress, green done.
-        val doneHere = step >= q.steps.size || travel.isQuestDone(q.name)
+        val doneHere = isDone(q)
         val nameColor = when {
             doneHere -> Ui.GREEN
             step > 0 -> Ui.TAN
             else -> Ui.RED
         }
         c.addView(Ui.text(this, q.name, 17f, nameColor, bold = true))
-        val meta = listOf(q.type, q.difficulty, "${q.steps.size} steps")
+        val tasks = q.steps.count { it.section.isNotBlank() }
+        val meta = (if (q.isDiary) listOf(q.region, q.tier, "$tasks tasks", "${q.steps.size} steps")
+            else listOf(q.type, q.difficulty, "${q.steps.size} steps"))
             .filter { it.isNotBlank() }
             .distinct()
             .joinToString(" · ")
@@ -451,13 +515,17 @@ class MainActivity : Activity() {
         }
 
         val markedDone = travel.isQuestDone(q.name)
+        val synced = if (q.isDiary) travel.diaryTier(q.region, q.tier) else null
         val status = when {
             step >= q.steps.size -> "Complete ✓"
             markedDone -> "Marked as done ✓"
+            synced?.complete == true -> "Complete (WikiSync) ✓"
+            step == 0 && synced != null && synced.total > 0 -> "${synced.done} of ${synced.total} tasks done (WikiSync)"
             step == 0 -> "Not started"
+            q.isDiary -> "In progress: ${q.sectionOf(step)} (step ${step + 1} of ${q.steps.size})"
             else -> "In progress: step ${step + 1} of ${q.steps.size}"
         }
-        val statusColor = if (step >= q.steps.size || markedDone) Ui.GREEN else Ui.MUTED
+        val statusColor = if (doneHere) Ui.GREEN else Ui.MUTED
         val statusView = Ui.text(this, status, 13f, statusColor)
         statusView.setPadding(0, Ui.dp(this, 6), 0, 0)
         c.addView(statusView)
@@ -548,12 +616,171 @@ class MainActivity : Activity() {
         return c
     }
 
+    private fun switchRow(c: LinearLayout, label: String, sub: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
+        val sw = android.widget.Switch(this)
+        sw.text = label
+        sw.setTextColor(Ui.TEXT)
+        sw.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        sw.typeface = Ui.typeface(this, bold = false)
+        sw.isChecked = checked
+        sw.thumbTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Ui.TAN, Ui.MUTED))
+        sw.trackTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(0x99FF981F.toInt(), Ui.STONE_DARK))
+        sw.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 2))
+        sw.setOnCheckedChangeListener { _, on -> onChange(on) }
+        c.addView(sw, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        if (sub != null) {
+            val t = Ui.text(this, sub, 11f, Ui.MUTED)
+            t.setPadding(0, 0, Ui.dp(this, 48), Ui.dp(this, 4))
+            c.addView(t)
+        }
+    }
+
+    /** The coach's other tools: vitals warnings, farming timers, kill counts and pets, Where am I, Sailing. */
+    private fun coachCard(): View {
+        val c = card()
+        c.addView(Ui.text(this, "Coach", 14f, Ui.TEXT, bold = true))
+        val farm = com.questoverlay.farming.FarmingStore(this).timers.filter { it.readyAt > System.currentTimeMillis() }
+        val sub = Ui.text(
+            this,
+            "HP and prayer warnings, farming timers" + (if (farm.isNotEmpty()) " (${farm.size} growing)" else "") +
+                ", kill counts and pet odds, finding you on the minimap, and Sailing.",
+            12f,
+            Ui.TAN
+        )
+        sub.setPadding(0, Ui.dp(this, 2), 0, 0)
+        c.addView(sub)
+        fun open(label: String, cls: Class<*>, primary: Boolean = false): View =
+            Ui.button(this, label, primary) { startActivity(Intent(this, cls)) }
+        val row1 = LinearLayout(this)
+        row1.orientation = LinearLayout.HORIZONTAL
+        row1.addView(open("Farming", com.questoverlay.farming.FarmingActivity::class.java), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val l2 = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        l2.leftMargin = Ui.dp(this, 8)
+        row1.addView(open("Pets & KC", com.questoverlay.capture.PetsActivity::class.java), l2)
+        c.addView(spaced(row1, 10))
+        val row2 = LinearLayout(this)
+        row2.orientation = LinearLayout.HORIZONTAL
+        row2.addView(open("Where am I", com.questoverlay.location.WhereActivity::class.java), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val l3 = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        l3.leftMargin = Ui.dp(this, 8)
+        row2.addView(open("Sailing", com.questoverlay.sailing.SailingActivity::class.java), l3)
+        c.addView(spaced(row2, 8))
+        c.addView(spaced(open("Warnings & settings", com.questoverlay.capture.CoachSettingsActivity::class.java), 8))
+        return c
+    }
+
+    /** AFK alerts: what to buzz you about while Auto-check is watching. */
+    private fun alertsCard(): View {
+        val alerts = AlertStore(this)
+        val c = card()
+        c.addView(Ui.text(this, "AFK alerts", 14f, Ui.TEXT, bold = true))
+        val how = Ui.text(
+            this,
+            "While \uD83D\uDC41 Auto-check is on, Breadcrumbs watches the game's messages. When one of these appears " +
+                "it buzzes, says it out loud (unless muted) and pops up a notification. The game has to stay on " +
+                "screen; a pop-up or split-screen window works if you want to do something else.",
+            12f,
+            Ui.TAN
+        )
+        how.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 4))
+        c.addView(how)
+        switchRow(c, "AFK alerts on", null, alerts.enabled) {
+            alerts.enabled = it
+            refresh()
+        }
+        if (!alerts.enabled) return c
+
+        for (rule in BuiltInAlerts.ALL) {
+            switchRow(
+                c, rule.label,
+                if (rule.confirmed) "\u201C${rule.patterns.first()}\u201D"
+                else "Exact wording not confirmed yet. If it misses, use \u201CAlert me on this\u201D below.",
+                alerts.isOn(rule)
+            ) { alerts.setOn(rule, it) }
+        }
+
+        val custom = alerts.custom
+        if (custom.isNotEmpty()) {
+            c.addView(spaced(Ui.text(this, "Your alerts", 13f, Ui.TEXT, bold = true), 10))
+            for (rule in custom) customAlertRow(c, alerts, rule)
+        }
+
+        c.addView(spaced(Ui.text(this, "Alert me on this", 13f, Ui.TEXT, bold = true), 10))
+        val lines = CaptureLog.recentLines().take(12)
+        if (lines.isEmpty()) {
+            val t = Ui.text(this, "Lines the game shows will appear here once Auto-check has been on. Tap one to be alerted whenever it shows up.", 12f, Ui.MUTED)
+            c.addView(t)
+        } else {
+            val t = Ui.text(this, "Tap a line it read to be alerted whenever it shows up again.", 12f, Ui.MUTED)
+            c.addView(t)
+            for (line in lines) {
+                val chip = Ui.chip(this, line, false)
+                chip.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                chip.setPadding(Ui.dp(this, 10), Ui.dp(this, 8), Ui.dp(this, 10), Ui.dp(this, 8))
+                chip.maxLines = 2
+                chip.ellipsize = TextUtils.TruncateAt.END
+                chip.setOnClickListener { addAlertDialog(alerts, line) }
+                c.addView(spaced(chip, 4))
+            }
+        }
+        c.addView(spaced(Ui.button(this, "Test the buzz and notification", false) {
+            Alerter(this).fire("Test alert", "This is what an AFK alert looks like.")
+        }, 10))
+        return c
+    }
+
+    private fun customAlertRow(c: LinearLayout, alerts: AlertStore, rule: AlertRule) {
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = Gravity.CENTER_VERTICAL
+        val texts = LinearLayout(this)
+        texts.orientation = LinearLayout.VERTICAL
+        texts.addView(Ui.text(this, rule.label, 13f, Ui.TEXT, bold = true))
+        texts.addView(Ui.text(this, "\u201C${rule.patterns.first()}\u201D", 11f, Ui.MUTED))
+        row.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val remove = Ui.chip(this, "Remove", false)
+        remove.setPadding(Ui.dp(this, 12), Ui.dp(this, 6), Ui.dp(this, 12), Ui.dp(this, 6))
+        remove.setOnClickListener {
+            alerts.removeCustom(rule.id)
+            refresh()
+        }
+        row.addView(remove)
+        c.addView(spaced(row, 6))
+    }
+
+    /** Lets you trim the line down to the part that matters ("The cargo hold is full") before saving. */
+    private fun addAlertDialog(alerts: AlertStore, line: String) {
+        val input = EditText(this)
+        input.setText(line)
+        input.setSelection(input.text.length)
+        input.setSingleLine(false)
+        val pad = Ui.dp(this, 20)
+        val frame = LinearLayout(this)
+        frame.setPadding(pad, Ui.dp(this, 8), pad, 0)
+        frame.addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Alert me when this shows up")
+            .setMessage("Trim it to the part that matters; small misreads are still caught.")
+            .setView(frame)
+            .setPositiveButton("Add alert") { _, _ ->
+                val phrase = input.text.toString().trim()
+                if (phrase.length >= 4) {
+                    alerts.addCustom(phrase.take(40), phrase)
+                    refresh()
+                } else {
+                    Toast.makeText(this, "That's too short to watch for.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     /** A one-glance summary of the account, opening the full "Your account" screen. */
     private fun accountCard(): View {
         val c = card()
         c.addView(Ui.text(this, "Your account", 14f, Ui.TEXT, bold = true))
         val name = travel.username
-        val advisor = Advisor(quests, travel.levels, travel.completedQuests, travel.startedQuests)
+        val advisor = Advisor(quests.filter { !it.isDiary }, travel.levels, travel.completedQuests, travel.startedQuests)
         if (name.isBlank()) {
             val sub = Ui.text(this, "Add your RuneScape name to see your levels, quests, diaries and what to do next.", 12f, Ui.TAN)
             sub.setPadding(0, Ui.dp(this, 2), 0, 0)

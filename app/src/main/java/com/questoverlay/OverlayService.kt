@@ -27,6 +27,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ScrollView
+import com.questoverlay.capture.AlertEngine
+import com.questoverlay.capture.AlertStore
+import com.questoverlay.capture.Alerter
 import com.questoverlay.capture.CaptureConsentActivity
 import com.questoverlay.capture.CaptureLog
 import com.questoverlay.capture.Coach
@@ -39,6 +42,32 @@ import com.questoverlay.capture.ScreenWatcher
 import com.questoverlay.capture.Speaker
 import com.questoverlay.capture.StepInfo
 import com.questoverlay.capture.Suggestion
+import com.questoverlay.capture.Frame
+import com.questoverlay.capture.Fuzzy
+import com.questoverlay.capture.HudLayout
+import com.questoverlay.capture.KillCountStore
+import com.questoverlay.capture.KillCountTracker
+import com.questoverlay.capture.Pets
+import com.questoverlay.capture.ScreenFacts
+import com.questoverlay.capture.VitalsEngine
+import com.questoverlay.capture.VitalsReader
+import com.questoverlay.capture.VitalsStore
+import com.questoverlay.farming.Farming
+import com.questoverlay.farming.FarmingStore
+import com.questoverlay.farming.SecateursAdvisor
+import com.questoverlay.location.Fix
+import com.questoverlay.location.LocationState
+import com.questoverlay.location.LocatorEngine
+import com.questoverlay.location.LocatorStatus
+import com.questoverlay.location.LocatorStore
+import com.questoverlay.location.Pixels
+import com.questoverlay.location.WorldMaps
+import com.questoverlay.sailing.NavTarget
+import com.questoverlay.sailing.SailingData
+import com.questoverlay.sailing.SailingStore
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.Executors
 import com.questoverlay.puzzles.PuzzleRepository
 import com.questoverlay.puzzles.PuzzleState
 import com.questoverlay.puzzles.PuzzleViews
@@ -90,6 +119,41 @@ class OverlayService : Service() {
     private var suggestionKey: String? = null
     private var highlight: HighlightView? = null
 
+    // AFK alerts ("Cargo hold full" etc.), checked on every look at the screen.
+    private lateinit var alertStore: AlertStore
+    private lateinit var alerter: Alerter
+    private val alertEngine = AlertEngine()
+    private var alertBanner: String? = null
+    private var alertAt = 0L
+
+    // Vitals, kill counts and farming, read from the same looks at the screen.
+    private val vitalsEngine = VitalsEngine()
+    private lateinit var vitalsStore: VitalsStore
+    private lateinit var killStore: KillCountStore
+    private lateinit var killTracker: KillCountTracker
+    private lateinit var farming: FarmingStore
+    private val secateurs = SecateursAdvisor()
+    /** Chat messages already handled (time + text), so one message starts one timer. */
+    private val seenChat = LinkedHashSet<String>()
+    private var chatPrimed = false
+    private var infoLine: String? = null
+    private var infoAt = 0L
+
+    // Where am I: the minimap matched against the world map, on a background thread.
+    private lateinit var locatorStore: LocatorStore
+    private lateinit var sailing: SailingStore
+    private val locWorker = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    @Volatile private var locBusy = false
+    @Volatile private var locator: LocatorEngine? = null
+    private var fix: Fix? = null
+    /** Where the current route was planned from; moves on after 15 tiles. */
+    private var routeAnchor: Fix? = null
+    private var liveCompass: CompassView? = null
+    private var liveLabel: TextView? = null
+    private var navCompass: CompassView? = null
+    private var navLabel: TextView? = null
+
     private val watching: Boolean get() = watcher?.running == true
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -99,8 +163,16 @@ class OverlayService : Service() {
         running = true
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
         speaker = Speaker(this)
+        alertStore = AlertStore(this)
+        alerter = Alerter(this)
         store = ProgressStore(this)
         travel = TravelStore(this)
+        vitalsStore = VitalsStore(this)
+        killStore = KillCountStore(this)
+        killTracker = KillCountTracker(killStore.counts)
+        farming = FarmingStore(this)
+        locatorStore = LocatorStore(this)
+        sailing = SailingStore(this)
         quests = try {
             QuestRepository.load(this)
         } catch (e: Exception) {
@@ -169,6 +241,8 @@ class OverlayService : Service() {
         watcher?.shutdown()
         watcher = null
         speaker.shutdown()
+        locWorker.shutdownNow()
+        WorldMaps.release()
         running = false
         super.onDestroy()
     }
@@ -395,6 +469,10 @@ class OverlayService : Service() {
         val w = watcher ?: ScreenWatcher(this, { onScreen(it) }, { onWatchStopped() }).also { watcher = it }
         try {
             w.start(code, data)
+            alertEngine.reset()
+            vitalsEngine.reset()
+            chatPrimed = false
+            locator?.reset()
             setSecure(true)
             CaptureLog.note("Auto-check on")
             render()
@@ -412,6 +490,7 @@ class OverlayService : Service() {
     /** Capture ended: switched off, phone locked, or sharing stopped from the notification. */
     private fun onWatchStopped() {
         setSecure(false)
+        fix = null
         hideHighlight()
         coachStatus = null
         suggestion = null
@@ -440,16 +519,26 @@ class OverlayService : Service() {
             questName = q.name,
             stepCount = q.steps.size,
             step = info(index),
-            upcoming = listOfNotNull(info(index + 1), info(index + 2))
+            upcoming = listOfNotNull(info(index + 1), info(index + 2)),
+            diaryRegion = if (q.isDiary) q.region else "",
+            diaryTier = q.tier,
+            nextTaskIndex = if (q.isDiary) q.nextSectionStart(index) else null,
+            // The reward step is the last task ("Finishing off").
+            lastTaskIndex = if (q.isDiary) q.steps.indexOfLast { it.section.isNotBlank() }.takeIf { it > index } else null
         )
     }
 
     /** One look at the screen: work out what's happening and react. */
-    private fun onScreen(lines: List<OcrLine>) {
-        val q = quest ?: return
+    private fun onScreen(frame: Frame) {
         if (root == null) return
+        val lines = frame.lines
+        checkAlerts(lines)
+        checkVitals(frame)
+        locate(frame)
+        val q = quest ?: return
         val ctx = coachContext(q)
         val facts = ScreenSense.read(lines, ctx.names, q.name)
+        checkChatEvents(facts)
         val out = coach.onFrame(facts, ctx)
         CaptureLog.frame(lines, facts, describe(out))
         out.speak?.let { speaker.say(it) }
@@ -469,6 +558,282 @@ class OverlayService : Service() {
         }
         showHighlight(out.highlight)
         if (changed) render()
+    }
+
+    /** AFK alerts: buzz, notify and say it when a watched-for message appears. */
+    private fun checkAlerts(lines: List<OcrLine>) {
+        val fired = alertEngine.check(lines.map { it.text }, alertStore.active())
+        if (fired.isEmpty()) return
+        for ((rule, line) in fired) {
+            CaptureLog.note("ALERT ${rule.label}: $line")
+            speaker.say(rule.label)
+            alerter.fire(rule.label, line)
+        }
+        showBanner("\uD83D\uDD14 " + fired.joinToString(" \u00B7 ") { it.first.label })
+    }
+
+    /** The red strip at the top of the card (alerts, vitals, secateurs). */
+    private fun showBanner(text: String) {
+        alertBanner = text
+        alertAt = System.currentTimeMillis()
+        render()
+    }
+
+    /** A passing note under the step (kill count, timer started), shown for 90 seconds. */
+    private fun info(text: String) {
+        infoLine = text
+        infoAt = System.currentTimeMillis()
+        render()
+    }
+
+    // ---------------------------------------------------------------- vitals, kill counts, farming
+
+    private fun checkVitals(frame: Frame) {
+        val cal = locator?.calibration
+        val hud = if (cal != null) HudLayout(cal.minimapX, cal.minimapY, cal.minimapRadius, frame.width, frame.height)
+            else HudLayout.default(frame.width, frame.height)
+        val reading = VitalsReader.read(frame.lines, hud)
+        if (reading.isEmpty) return
+        for (w in vitalsEngine.check(reading, vitalsStore.settings(travel.levels))) {
+            CaptureLog.note("VITALS ${w.text}")
+            speaker.say(w.text.substringBefore(":").substringBefore("!"))
+            showBanner((if (w.id == "hp") "\u2764 " else "\u2728 ") + w.text)
+        }
+    }
+
+    private fun fairytaleDone(): Boolean? =
+        if (travel.completedQuests.isEmpty()) null else travel.isQuestDone("Fairytale I - Growing Pains")
+
+    private fun checkChatEvents(facts: ScreenFacts) {
+        for ((boss, kc) in killTracker.update(facts.killCounts)) {
+            killStore.merge(mapOf(boss to kc))
+            val pet = Pets.forBoss(boss)
+            CaptureLog.note("KC $boss $kc")
+            info(if (pet != null) "$boss KC $kc \u00B7 ${Pets.percent(pet.chanceBy(kc))} chance of ${pet.pet} by now" else "$boss KC $kc")
+        }
+        // Farming reacts only to messages that appear while watching (not old ones already in chat).
+        val fresh = facts.timedMessages.filter { (t, m) -> seenChat.add("${t ?: ""}|${Fuzzy.norm(m)}") }
+        while (seenChat.size > 400) seenChat.remove(seenChat.first())
+        if (!chatPrimed) {
+            chatPrimed = true
+            return
+        }
+        for ((_, m) in fresh) {
+            Farming.planting(m)?.let { p ->
+                if (farming.autoStart) {
+                    val t = farming.plant(p.crop, p.count, place = nearestPlaceName())
+                    CaptureLog.note("FARM planted ${p.crop.name}")
+                    info("\u23F1 ${t.label}: ready ${java.text.SimpleDateFormat(if (t.readyAt - System.currentTimeMillis() < 12 * 3600_000L) "h:mm a" else "EEE h:mm a", java.util.Locale.getDefault()).format(java.util.Date(t.readyAt))}")
+                }
+                secateurs.onPlant(p.crop, farming.alwaysSecateurs, fairytaleDone())?.let { warnSecateurs(it) }
+            }
+            Farming.harvesting(m)?.let { c ->
+                secateurs.onHarvest(c, farming.alwaysSecateurs, fairytaleDone())?.let { warnSecateurs(it) }
+            }
+        }
+    }
+
+    /** Text and voice: the red strip always shows; 🔇 silences only the voice. */
+    private fun warnSecateurs(w: SecateursAdvisor.Warning) {
+        CaptureLog.note("SECATEURS ${w.text}")
+        speaker.say(w.speak)
+        showBanner("\u2702 " + w.text)
+    }
+
+    private fun nearestPlaceName(): String {
+        val f = fix?.takeIf { System.currentTimeMillis() - it.at < 60_000 } ?: return ""
+        val places = try { TravelEngine.places(this) } catch (e: Exception) { return "" }
+        val p = places.filter { Packed.z(it.tile) == 0 }.minByOrNull { f.distanceTo(Packed.x(it.tile), Packed.y(it.tile)) } ?: return ""
+        return if (f.distanceTo(Packed.x(p.tile), Packed.y(p.tile)) <= 40) "near ${p.name}" else ""
+    }
+
+    // ---------------------------------------------------------------- where am I
+
+    private fun locate(frame: Frame) {
+        if (!locatorStore.enabled || frame.corner == null || locBusy) return
+        locBusy = true
+        val app = applicationContext
+        try {
+            locWorker.execute {
+                val result = try {
+                    val regions = WorldMaps.load(app)
+                    val eng = locator ?: LocatorEngine(
+                        regions,
+                        zoom = locatorStore.zoom.takeIf { it > 0f } ?: 0.95f,
+                        zoomKnown = locatorStore.zoom > 0f,
+                        onZoomLearned = { z -> locatorStore.zoom = z }
+                    ).also { locator = it }
+                    eng.onFrame(Pixels { x, y -> frame.pixel(x, y) }, frame.width, frame.height) to eng
+                } catch (e: OutOfMemoryError) {
+                    null
+                } catch (e: Exception) {
+                    null
+                }
+                mainHandler.post {
+                    locBusy = false
+                    if (result != null) onLocation(result.first, result.second)
+                }
+            }
+        } catch (e: Exception) {
+            locBusy = false // the worker was shut down
+        }
+    }
+
+    private fun onLocation(st: LocatorStatus, eng: LocatorEngine) {
+        LocationState.status = st
+        LocationState.updatedAt = System.currentTimeMillis()
+        LocationState.calibration = eng.calibration
+        LocationState.zoom = eng.zoom
+        if (root == null) return
+        val had = fix != null
+        val f = st.fix
+        fix = f
+        var redraw = had != (f != null)
+        if (f != null) {
+            val a = routeAnchor
+            if (a == null || a.region != f.region || a.distanceTo(f.tileX, f.tileY) >= 15) {
+                routeAnchor = f
+                redraw = true
+            }
+            val q = quest
+            if (q != null && locatorStore.arrivalCheck && store.stepIndex(q) < q.steps.size) {
+                val tile = q.steps[store.stepIndex(q)].tile
+                val at = tile != null && tile.plane == 0 && f.distanceTo(tile.x, tile.y) <= 3
+                val ctx = coachContext(q)
+                val out = coach.onArrival(ctx, at)
+                out.speak?.let { speaker.say(it) }
+                if (out.suggestion != null) {
+                    suggestion = out.suggestion
+                    suggestionKey = ctx.key
+                    redraw = true
+                }
+            }
+            if (advanceNav(f)) redraw = true
+        }
+        if (redraw) render() else updateLive()
+    }
+
+    /** Sailing routes: on reaching a waypoint, aim at the next one. Returns true if the target changed. */
+    private fun advanceNav(f: Fix): Boolean {
+        val t = sailing.target ?: return false
+        if (t.routeKey.isEmpty() || f.distanceTo(t.x, t.y) > 6) return false
+        val (from, to) = t.routeKey.split('>').let { (it.getOrNull(0) ?: "") to (it.getOrNull(1) ?: "") }
+        val route = try { SailingData.load(this).routes.firstOrNull { it.from == from && it.to == to } } catch (e: Exception) { null } ?: return false
+        val next = sailing.routeIndex + 1
+        sailing.routeIndex = next
+        sailing.target = if (next < route.points.size) {
+            val p = route.points[next]
+            NavTarget("$to (waypoint $next of ${route.points.size - 1})", p.first, p.second, routeKey = t.routeKey)
+        } else {
+            NavTarget("$to (arrived)", route.points.last().first, route.points.last().second)
+        }
+        speaker.say(if (next < route.points.size) "Next waypoint" else "Arrived")
+        return true
+    }
+
+    /** The minimap fix only makes sense for targets on the same map (surface vs Prifddinas). */
+    private fun pointable(f: Fix, x: Int, y: Int): Boolean = abs(y - f.tileY) < 2000 && abs(x - f.tileX) < 2000
+
+    private fun compassWord(deg: Float): String =
+        listOf("north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west")[(((deg + 22.5f) % 360f) / 45f).toInt()]
+
+    /** Turns the arrows on the card to match where you are and which way the camera faces. */
+    private fun updateLive() {
+        val f = fix?.takeIf { System.currentTimeMillis() - it.at < 20_000 }
+        val q = quest
+        val tile = q?.let { it.steps.getOrNull(store.stepIndex(it))?.tile }
+        liveCompass?.let { c ->
+            if (f != null && tile != null && tile.plane == 0 && pointable(f, tile.x, tile.y)) {
+                c.northAngle = f.cameraAngle
+                c.screenAngle = f.screenAngleTo(tile.x, tile.y)
+                val d = f.straightLineTiles(tile.x, tile.y)
+                liveLabel?.text = if (d <= 3) "\uD83D\uDCCD You're there" else "\uD83D\uDCCD $d tiles ${compassWord(f.bearingTo(tile.x, tile.y))} of you"
+                liveLabel?.visibility = View.VISIBLE
+            } else {
+                c.screenAngle = null
+                liveLabel?.visibility = View.GONE
+            }
+        }
+        val t = sailing.target
+        navCompass?.let { c ->
+            if (f != null && t != null && pointable(f, t.x, t.y)) {
+                c.northAngle = f.cameraAngle
+                c.screenAngle = f.screenAngleTo(t.x, t.y)
+                val d = f.straightLineTiles(t.x, t.y)
+                navLabel?.text = if (d <= 4) "You're there" else "$d tiles ${compassWord(f.bearingTo(t.x, t.y))}"
+            } else {
+                c.screenAngle = null
+                navLabel?.text = if (watching) "Finding you on the minimap\u2026" else "Switch on \uD83D\uDC41 to point the way"
+            }
+        }
+    }
+
+    /** The Sailing (or any) target strip at the top of the card: arrow, name, distance, ✕. */
+    private fun buildNavStrip(): View? {
+        val t = sailing.target ?: return null
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = Gravity.CENTER_VERTICAL
+        val p = Ui.dp(this, 6)
+        row.setPadding(p, p / 2, p / 2, p / 2)
+        row.background = Ui.rounded(this, Ui.STONE_DARK, 4, Ui.STROKE, 1)
+        val c = CompassView(this)
+        navCompass = c
+        row.addView(c, LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)))
+        val col = LinearLayout(this)
+        col.orientation = LinearLayout.VERTICAL
+        col.setPadding(Ui.dp(this, 8), 0, 0, 0)
+        val name = Ui.text(this, "\u26F5 ${t.name}", 13f, Ui.GOLD, bold = true)
+        name.maxLines = 2
+        name.ellipsize = TextUtils.TruncateAt.END
+        col.addView(name)
+        val label = Ui.text(this, "", 12f, Ui.TAN)
+        navLabel = label
+        col.addView(label)
+        val f = fix
+        if (t.chartId >= 0 && f != null && f.distanceTo(t.x, t.y) <= 4) {
+            val done = Ui.text(this, "Mark charted \u2713", 12f, Ui.GREEN, bold = true)
+            done.setOnClickListener {
+                sailing.charted = sailing.charted + t.chartId
+                sailing.target = null
+                render()
+            }
+            col.addView(done)
+        }
+        row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(iconButton("\u2715") {
+            sailing.target = null
+            render()
+        })
+        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lp.topMargin = Ui.dp(this, 6)
+        row.layoutParams = lp
+        return row
+    }
+
+    /** The red alert strip at the top of the card; it goes away after two minutes or with ✕. */
+    private fun buildAlertBanner(): View? {
+        val text = alertBanner ?: return null
+        if (System.currentTimeMillis() - alertAt > 120_000) {
+            alertBanner = null
+            return null
+        }
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = Gravity.CENTER_VERTICAL
+        val p = Ui.dp(this, 8)
+        row.setPadding(p, p / 2, p / 2, p / 2)
+        row.background = Ui.rounded(this, 0xFF5A0F0F.toInt(), 4, Ui.RED, 2)
+        val t = Ui.text(this, text, 14f, Ui.TEXT, bold = true)
+        row.addView(t, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(iconButton("\u2715") {
+            alertBanner = null
+            render()
+        })
+        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lp.topMargin = Ui.dp(this, 6)
+        row.layoutParams = lp
+        return row
     }
 
     private fun describe(out: CoachOutput): String? = when {
@@ -561,9 +926,14 @@ class OverlayService : Service() {
         val q = quest ?: return
         puzzleScrollY = puzzleScroll?.scrollY ?: 0
         puzzleScroll = null
+        liveCompass = null
+        liveLabel = null
+        navCompass = null
+        navLabel = null
         frame.removeAllViews()
         frame.alpha = store.opacity
         frame.addView(if (collapsed) buildBubble(q) else buildCard(q))
+        updateLive()
         frame.post { clampToScreen() }
     }
 
@@ -594,6 +964,8 @@ class OverlayService : Service() {
         card.layoutParams = FrameLayout.LayoutParams(Ui.dp(this, 320), ViewGroup.LayoutParams.WRAP_CONTENT)
 
         card.addView(buildHeader(q, step))
+        buildAlertBanner()?.let { card.addView(it) }
+        buildNavStrip()?.let { card.addView(it) }
         card.addView(buildProgress(q, step))
         when {
             mode == Mode.ITEMS -> card.addView(buildItems(q))
@@ -631,7 +1003,7 @@ class OverlayService : Service() {
         title.ellipsize = TextUtils.TruncateAt.END
         val subtitle = Ui.text(
             this,
-            (if (step >= q.steps.size) "Quest complete" else "Step ${step + 1} of ${q.steps.size}") +
+            (if (step >= q.steps.size) "${q.kindLabel} complete" else "Step ${step + 1} of ${q.steps.size}") +
                 if (watching) " \u00B7 watching" else "",
             11f,
             Ui.TAN
@@ -709,6 +1081,7 @@ class OverlayService : Service() {
 
         val compass = CompassView(this)
         compass.dir = s.dir
+        liveCompass = compass
         row.addView(compass, LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)))
 
         val col = LinearLayout(this)
@@ -733,7 +1106,22 @@ class OverlayService : Service() {
             dirLabel.setPadding(0, Ui.dp(this, 6), 0, 0)
             col.addView(dirLabel)
         }
+        // From the minimap: how far, and which way, from where you actually are.
+        val live = Ui.text(this, "", 12f, Ui.GREEN, bold = true)
+        live.setPadding(0, Ui.dp(this, 4), 0, 0)
+        live.visibility = View.GONE
+        liveLabel = live
+        col.addView(live)
         travelLine(q, step)?.let { col.addView(it) }
+        // Diary tasks can be done in any order: let the player skip one they can't do yet.
+        if (q.isDiary) {
+            q.nextSectionStart(step)?.let { next ->
+                val skip = Ui.text(this, "Skip this task: ${q.steps[next].section}  \u203A", 12f, Ui.TAN, bold = true)
+                skip.setPadding(0, Ui.dp(this, 6), 0, 0)
+                skip.setOnClickListener { goTo(q, next) }
+                col.addView(skip)
+            }
+        }
         puzzleLine(q, s)?.let { col.addView(it) }
         if (s.chat.isNotEmpty()) {
             val options = s.chat.joinToString("  ›  ")
@@ -750,6 +1138,12 @@ class OverlayService : Service() {
             val line = Ui.text(this, "\uD83D\uDC41 " + (coachStatus ?: "Watching the screen"), 12f, Ui.GREEN, bold = true)
             line.setPadding(0, Ui.dp(this, 6), 0, 0)
             col.addView(line)
+        }
+        val note = infoLine
+        if (note != null && System.currentTimeMillis() - infoAt < 90_000) {
+            val t = Ui.text(this, note, 12f, Ui.TAN)
+            t.setPadding(0, Ui.dp(this, 4), 0, 0)
+            col.addView(t)
         }
         row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
@@ -788,8 +1182,14 @@ class OverlayService : Service() {
     private fun buildComplete(q: Quest): View {
         val container = LinearLayout(this)
         container.orientation = LinearLayout.VERTICAL
-        container.addView(Ui.text(this, "Quest complete!", 18f, Ui.GREEN, bold = true))
-        val note = Ui.text(this, "Claim your rewards, then pick your next quest.", 13f, Ui.TEXT)
+        container.addView(Ui.text(this, "${q.kindLabel} complete!", 18f, Ui.GREEN, bold = true))
+        val note = Ui.text(
+            this,
+            if (q.isDiary) "Claim your reward from the diary's reward NPC, then pick what's next."
+            else "Claim your rewards, then pick your next quest.",
+            13f,
+            Ui.TEXT
+        )
         note.setPadding(0, Ui.dp(this, 4), 0, 0)
         container.addView(note)
 
@@ -799,7 +1199,7 @@ class OverlayService : Service() {
             store.reset(q.id)
             render()
         }
-        val pick = Ui.button(this, "Pick quest", true) { openApp() }
+        val pick = Ui.button(this, if (q.isDiary) "Pick next" else "Pick quest", true) { openApp() }
         buttons.addView(again, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val pickLp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         pickLp.leftMargin = Ui.dp(this, 8)
@@ -938,8 +1338,13 @@ class OverlayService : Service() {
 
     // ---------------------------------------------------------------- travel guide
 
-    /** Where the player most likely is before doing step [index]: the last step with a map tile. */
+    /**
+     * Where the player is before doing step [index]: where the minimap says you are, if known;
+     * otherwise the last step with a map tile, or the start place from the travel settings.
+     */
     private fun startFor(q: Quest, index: Int): Pair<Int, String> {
+        val f = routeAnchor?.takeIf { fix != null && System.currentTimeMillis() - (fix?.at ?: 0L) < 60_000 }
+        if (f != null) return Packed.pack(f.tileX, f.tileY, 0) to "where you are"
         for (i in (index - 1) downTo 0) {
             val t = q.steps.getOrNull(i)?.tile ?: continue
             return Packed.pack(t.x, t.y, t.plane) to "where the last step was"
@@ -1005,7 +1410,7 @@ class OverlayService : Service() {
         list.orientation = LinearLayout.VERTICAL
 
         if (step >= q.steps.size) {
-            list.addView(Ui.text(this, "Quest complete: nowhere left to go.", 13f, Ui.TEXT))
+            list.addView(Ui.text(this, "${q.kindLabel} complete: nowhere left to go.", 13f, Ui.TEXT))
             return list
         }
         val target = targetFor(q, step)

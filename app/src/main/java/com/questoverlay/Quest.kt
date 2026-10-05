@@ -71,14 +71,40 @@ data class Quest(
     val wikiUrl: String,
     val items: List<Item>,
     val steps: List<Step>,
-    /** Quest points awarded (0 for miniquests). */
-    val qp: Int = 0
+    /** Quest points awarded (0 for miniquests and diaries). */
+    val qp: Int = 0,
+    /** Achievement diaries: "Ardougne" and "Easy". Empty for quests. */
+    val region: String = "",
+    val tier: String = ""
 ) {
+    val isDiary: Boolean get() = type == "Diary"
+
+    /** "Quest", "Miniquest" or "Diary", for labels like "Quest complete". */
+    val kindLabel: String
+        get() = when (type) {
+            "Diary" -> "Diary"
+            "Miniquest" -> "Miniquest"
+            else -> "Quest"
+        }
+
+    /** Index of the first step of the next diary task (section) after [index], or null at the last one. */
+    fun nextSectionStart(index: Int): Int? {
+        for (i in index + 1 until steps.size) if (steps[i].section.isNotBlank()) return i
+        return null
+    }
+
+    /** The task (section) a step belongs to. */
+    fun sectionOf(index: Int): String =
+        (index.coerceAtMost(steps.size - 1) downTo 0).map { steps[it].section }.firstOrNull { it.isNotBlank() } ?: ""
+
     val requiredItems: List<Item> get() = items.filter { !it.recommended }
     val recommendedItems: List<Item> get() = items.filter { it.recommended }
 }
 
 object QuestRepository {
+
+    /** Quests and miniquests only (no diaries), for quest points and "what's next". */
+    fun questsOnly(context: Context): List<Quest> = load(context).filter { !it.isDiary }
 
     @Volatile
     private var cache: List<Quest>? = null
@@ -170,7 +196,9 @@ object QuestRepository {
             wikiUrl = o.optString("wikiUrl", ""),
             items = items,
             steps = steps,
-            qp = o.optInt("qp", 0)
+            qp = o.optInt("qp", 0),
+            region = o.optString("region", ""),
+            tier = o.optString("tier", "")
         )
     }
 }

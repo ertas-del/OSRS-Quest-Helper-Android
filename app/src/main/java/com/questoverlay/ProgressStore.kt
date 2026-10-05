@@ -27,6 +27,20 @@ class ProgressStore(context: Context) {
     val overlayY: Int?
         get() = if (prefs.contains(KEY_Y)) prefs.getInt(KEY_Y, 0) else null
 
+    /** Main screen: hide quests and diaries you've finished. */
+    var hideDone: Boolean
+        get() = prefs.getBoolean(KEY_HIDE_DONE, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_HIDE_DONE, value).apply()
+        }
+
+    /** Main screen: show only what you've started. */
+    var startedOnly: Boolean
+        get() = prefs.getBoolean(KEY_STARTED_ONLY, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_STARTED_ONLY, value).apply()
+        }
+
     fun savePosition(x: Int, y: Int) {
         prefs.edit().putInt(KEY_X, x).putInt(KEY_Y, y).apply()
     }
@@ -83,5 +97,7 @@ class ProgressStore(context: Context) {
         const val KEY_OPACITY = "opacity"
         const val KEY_X = "overlay_x"
         const val KEY_Y = "overlay_y"
+        const val KEY_HIDE_DONE = "hide_done"
+        const val KEY_STARTED_ONLY = "started_only"
     }
 }

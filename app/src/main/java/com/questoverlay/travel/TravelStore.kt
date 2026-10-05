@@ -86,6 +86,14 @@ class TravelStore(context: Context) {
             v.joinToString("\n") { "${it.region}|${it.tier}|${if (it.complete) 1 else 0}|${it.done}|${it.total}" }
         ).apply()
 
+    /** WikiSync progress for one diary tier ("Kourend & Kebos", "Hard"), if synced. */
+    fun diaryTier(region: String, tier: String): AccountSync.DiaryTier? {
+        fun key(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+        val r = key(region)
+        val t = key(tier)
+        return diaries.firstOrNull { key(it.region) == r && key(it.tier) == t }
+    }
+
     var wikiSyncUpdated: Long
         get() = prefs.getLong("wikisync_time", 0L)
         set(v) = prefs.edit().putLong("wikisync_time", v).apply()

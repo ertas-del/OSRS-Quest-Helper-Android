@@ -460,14 +460,19 @@ def extract_panels(src):
         return []
     s, e = body
     t = src.toks
-    if not any(t[k].val == "PanelDetails" and t[k - 1].val == "new" for k in range(s, e)):
+    if not any(t[k].val == "PanelDetails" and (t[k - 1].val == "new" or t[k + 1].val == ".") for k in range(s, e)):
         s, e = 0, len(t)
     t = src.toks
     sections = []
     i = s
     while i < e - 2:
-        if t[i].val == "new" and t[i + 1].val == "PanelDetails" and t[i + 2].val == "(":
-            args, close = split_args(t, i + 2)
+        locked = (t[i].val == "PanelDetails" and t[i + 1].val == "." and i + 3 < e
+                  and t[i + 2].val == "lockedPanel" and t[i + 3].val == "(")
+        if locked or (t[i].val == "new" and t[i + 1].val == "PanelDetails" and t[i + 2].val == "("):
+            args, close = split_args(t, i + 3 if locked else i + 2)
+            if locked:
+                # Drop the display condition and locking step: (title, steps, items...) like the constructor.
+                args = args[:1] + args[3:]
             title = string_value(args[0]) if args else None
             step_ids = []
             if len(args) >= 2:
@@ -769,16 +774,33 @@ def direction(prev, cur, text=""):
 
 
 def load_enum(qh_root):
+    """Quests, miniquests and achievement diary tiers from Quest Helper's quest list.
+
+    Each entry is read as a whole (diary entries span two lines). Returns tuples of
+    (enum name, helper class, type, difficulty, display name or None)."""
     info = os.path.join(qh_root, "src/main/java/com/questhelper/questinfo")
     entries = []
     with open(os.path.join(info, "QuestHelperQuest.java"), encoding="utf-8") as fh:
-        for line in fh:
-            m = re.match(
-                r"\s*(\w+)\(new (\w+)\(\)\s*,.*QuestDetails\.Type\.(F2P|P2P|MINIQUEST)\s*,\s*QuestDetails\.Difficulty\.(\w+)",
-                line,
-            )
-            if m:
-                entries.append(m.groups())
+        text = fh.read()
+    for m in re.finditer(r"^\s*(\w+)\(new (\w+)\(\)", text, re.M):
+        # The entry runs until the brackets balance again.
+        depth = 0
+        end = m.start()
+        for k in range(text.index("(", m.start()), len(text)):
+            c = text[k]
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+                if depth == 0:
+                    end = k
+                    break
+        body = text[m.start():end + 1]
+        t = re.search(r"QuestDetails\.Type\.(F2P|P2P|MINIQUEST|ACHIEVEMENT_DIARY)\s*,\s*QuestDetails\.Difficulty\.(\w+)", body)
+        if not t:
+            continue
+        label = re.search(r'new \w+\(\)\s*,\s*"([^"]+)"', body)
+        entries.append((m.group(1), m.group(2), t.group(1), t.group(2), label.group(1) if label else None))
     urls = {}
     with open(os.path.join(info, "ExternalQuestResources.java"), encoding="utf-8") as fh:
         for line in fh:
@@ -786,6 +808,18 @@ def load_enum(qh_root):
             if m:
                 urls[m.group(1)] = m.group(2)
     return entries, urls
+
+
+DIARY_TIERS = ("EASY", "MEDIUM", "HARD", "ELITE")
+
+
+def diary_info(enum_name, label):
+    """("Ardougne", "Easy") from ARDOUGNE_EASY / "Ardougne Easy Diary"."""
+    tier = enum_name.rsplit("_", 1)[-1].title()
+    region = (label or "").replace(" Diary", "")
+    if region.endswith(" " + tier):
+        region = region[: -len(tier) - 1]
+    return region, tier
 
 
 def name_from_url(url):
@@ -806,18 +840,23 @@ def find_class_dir(qh_root, cls):
 def convert(qh_root):
     entries, urls = load_enum(qh_root)
     quest_names = {}
-    for enum_name, cls, typ, diff in entries:
-        quest_names[enum_name] = name_from_url(urls.get(enum_name)) or pretty_enum(enum_name)
+    for enum_name, cls, typ, diff, label in entries:
+        if typ == "ACHIEVEMENT_DIARY":
+            quest_names[enum_name] = label or pretty_enum(enum_name)
+        else:
+            quest_names[enum_name] = name_from_url(urls.get(enum_name)) or pretty_enum(enum_name)
 
     quests = []
     report = []
-    for enum_name, cls, typ, diff in entries:
+    for enum_name, cls, typ, diff, label in entries:
+        if enum_name.startswith("BALLOON_TRANSPORT_"):
+            continue  # balloon route unlocks, not quests
         qdir, main_file = find_class_dir(qh_root, cls)
         if not main_file:
             report.append(f"MISSING {enum_name} {cls}")
             continue
         files = [main_file]
-        if os.path.basename(qdir) not in ("quests", "miniquests", "helpers"):
+        if typ != "ACHIEVEMENT_DIARY" and os.path.basename(qdir) not in ("quests", "miniquests", "helpers"):
             for root, _, fnames in os.walk(qdir):
                 for f in sorted(fnames):
                     fp = os.path.join(root, f)
@@ -877,19 +916,31 @@ def convert(qh_root):
             continue
         items = extract_items(src)
         reqs = extract_requirements(src, quest_names)
-        quests.append({
+        entry = {
             "id": enum_name.lower(),
             "name": quest_names[enum_name],
-            "type": {"F2P": "Free", "P2P": "Members", "MINIQUEST": "Miniquest"}[typ],
-            "difficulty": diff.replace("_", " ").title() if diff != "MINIQUEST" else "Miniquest",
-            "qp": extract_quest_points(src),
+            "type": {"F2P": "Free", "P2P": "Members", "MINIQUEST": "Miniquest", "ACHIEVEMENT_DIARY": "Diary"}[typ],
+            "difficulty": diff.replace("_", " ").title() if diff not in ("MINIQUEST", "ACHIEVEMENT_DIARY") else
+                          ("Miniquest" if diff == "MINIQUEST" else diary_info(enum_name, label)[1]),
+            "qp": extract_quest_points(src) if typ in ("F2P", "P2P") else 0,
             "requirements": reqs,
             "wikiUrl": urls.get(enum_name, ""),
             "items": items,
             "steps": steps,
-        })
+        }
+        if typ == "ACHIEVEMENT_DIARY":
+            region, tier = diary_info(enum_name, label)
+            entry["region"] = region
+            entry["tier"] = tier
+            if not entry["wikiUrl"]:
+                entry["wikiUrl"] = "https://oldschool.runescape.wiki/w/" + urllib.parse.quote(region.replace(" ", "_")) + "_Diary"
+        quests.append(entry)
         report.append(f"ok {enum_name}: {len(steps)} steps, {len(items)} items, {len(reqs)} reqs")
-    quests.sort(key=lambda q: q["name"].lower().removeprefix("the "))
+    def order(q):
+        if q["type"] == "Diary":
+            return (1, q["region"].lower(), ["Easy", "Medium", "Hard", "Elite"].index(q["tier"]))
+        return (0, q["name"].lower().removeprefix("the "), 0)
+    quests.sort(key=order)
     return quests, report
 
 

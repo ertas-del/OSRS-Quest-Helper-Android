@@ -15,6 +15,30 @@ import android.os.Looper
 import android.view.WindowManager
 
 /**
+ * One look at the screen: the text on it, its size, and a copy of the top-right corner's pixels
+ * (minimap and compass) for working out where you are. ARGB ints, row by row.
+ */
+class Frame(
+    val lines: List<OcrLine>,
+    val width: Int,
+    val height: Int,
+    val corner: IntArray?,
+    val cornerX: Int,
+    val cornerY: Int,
+    val cornerW: Int,
+    val cornerH: Int
+) {
+    /** The pixel at screen position (x, y), or 0 outside the copied corner. */
+    fun pixel(x: Int, y: Int): Int {
+        val c = corner ?: return 0
+        val cx = x - cornerX
+        val cy = y - cornerY
+        if (cx < 0 || cy < 0 || cx >= cornerW || cy >= cornerH) return 0
+        return c[cy * cornerW + cx]
+    }
+}
+
+/**
  * Takes a look at the screen every [intervalMs] while Auto-check is on, reads the text on it and
  * hands the lines to [onLines] on the main thread. Uses Android's screen capture (the same thing
  * screen recorders use): it sees only pixels, never the game's memory, files or network.
@@ -23,7 +47,7 @@ import android.view.WindowManager
  */
 class ScreenWatcher(
     private val context: Context,
-    private val onLines: (List<OcrLine>) -> Unit,
+    private val onFrame: (Frame) -> Unit,
     private val onStopped: () -> Unit,
     private val intervalMs: Long = 1500
 ) {
@@ -141,10 +165,24 @@ class ScreenWatcher(
         }
         if (bitmap == null) return
         busy = true
+        // The minimap and compass live in the top-right corner (landscape). Copy that much now:
+        // the bitmap is recycled once the text is read.
+        val w = bitmap.width
+        val h = bitmap.height
+        val unit = minOf(w, h)
+        val cx = (w - (0.62f * unit).toInt()).coerceAtLeast(0)
+        val ch = (0.5f * unit).toInt().coerceAtMost(h)
+        val cw = w - cx
+        val corner = try {
+            IntArray(cw * ch).also { bitmap.getPixels(it, 0, cw, cx, 0, cw, ch) }
+        } catch (e: Exception) {
+            null
+        }
         reader.read(bitmap) { lines ->
             bitmap.recycle()
             busy = false
-            if (running) main.post { onLines(lines) }
+            val frame = Frame(lines, w, h, corner, cx, 0, cw, ch)
+            if (running) main.post { onFrame(frame) }
         }
     }
 }

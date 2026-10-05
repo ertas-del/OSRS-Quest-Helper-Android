@@ -39,7 +39,7 @@ class AccountActivity : Activity() {
         super.onCreate(savedInstanceState)
         store = TravelStore(this)
         quests = try {
-            QuestRepository.load(this)
+            QuestRepository.questsOnly(this)
         } catch (e: Exception) {
             emptyList()
         }

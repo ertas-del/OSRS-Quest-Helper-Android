@@ -42,6 +42,13 @@ It's dressed like the classic in-game interface: bevelled brown stone panels, pi
 - **What it read:** the main screen shows the last things it read and decided, for spotting misreads.
 - Pictures are read on the phone with Google's ML Kit and thrown away; nothing is saved or sent. Its own card is blacked out in the capture so it never reads itself.
 
+### AFK alerts
+- While Auto-check is on, Breadcrumbs watches the game's messages and **buzzes, speaks and pops up a notification** when one you care about appears.
+- Built in: **Cargo hold full** ("The cargo hold is full. I can't salvage anything."), **Inventory full** and **Shipwreck finished** (the last two use best-guess wording until confirmed in-game).
+- **Alert me on this:** the main screen lists lines it read recently. Tap one, trim it to the part that matters, and you'll be alerted whenever it shows up again. Works for any AFK activity.
+- An alert fires when its message *appears*, not every time it's still sitting in chat, and each alert waits 45 seconds before it can fire again. Small misreads (0/O, 1/l) still match.
+- The game has to stay on screen; a pop-up or split-screen window works. **🔇** mutes the voice; the buzz and notification still happen.
+
 ### Your account
 - **One tap syncs everything:** levels from the official hiscores, finished and in-progress quests and achievement diary progress from WikiSync.
 - **At a glance:** combat level, total level, quest points out of the maximum, and quests done, with every skill level and a diary grid (✓ done, or tasks done out of the total, for each region and tier).

@@ -7,6 +7,10 @@
     <!-- Auto-check: the overlay reads the game screen (only while you have it switched on). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- AFK alerts buzz the phone. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Farming timers: put the "ready" alarms back after the phone restarts. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Only for the public hiscores and WikiSync lookups in Travel settings. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -19,6 +23,7 @@
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="Breadcrumbs"
+        android:largeHeap="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
         <activity
@@ -48,6 +53,19 @@
             android:name=".TravelSettingsActivity"
             android:exported="false"
             android:label="Travel settings" />
+
+        <activity android:name=".capture.CoachSettingsActivity" android:exported="false" android:label="Coach" />
+        <activity android:name=".capture.PetsActivity" android:exported="false" android:label="Kill counts &amp; pets" />
+        <activity android:name=".farming.FarmingActivity" android:exported="false" android:label="Farming timers" />
+        <activity android:name=".location.WhereActivity" android:exported="false" android:label="Where am I" />
+        <activity android:name=".sailing.SailingActivity" android:exported="false" android:label="Sailing" />
+
+        <!-- Posts "ready to harvest" notifications, and restores the alarms after a restart. -->
+        <receiver android:name=".farming.FarmingAlarmReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <service
             android:name=".OverlayService"

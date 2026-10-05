@@ -62,6 +62,43 @@ object AccountSync {
         }
     }
 
+    /**
+     * Boss kill counts (and raid completions) from the hiscores' JSON version, which names each
+     * activity. Only ranked ones are returned (the hiscores hide counts below the ranking cut-off).
+     */
+    fun fetchBossCounts(username: String, onDone: (Outcome<Map<String, Int>>) -> Unit) {
+        val name = username.trim()
+        worker.execute {
+            val outcome: Outcome<Map<String, Int>> = try {
+                val (code, body) = get("https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player=" + enc(name))
+                when {
+                    code == 404 -> Outcome.Error("\"$name\" isn't on the hiscores.")
+                    code != 200 -> Outcome.Error("The hiscores answered with error $code. Try again later.")
+                    else -> {
+                        val out = HashMap<String, Int>()
+                        val acts = JSONObject(body).optJSONArray("activities")
+                        if (acts != null) for (i in 0 until acts.length()) {
+                            val a = acts.optJSONObject(i) ?: continue
+                            val score = a.optInt("score", -1)
+                            val n = a.optString("name", "")
+                            if (score > 0 && n.isNotBlank() && n !in NOT_BOSSES && !n.startsWith("Clue Scrolls")) out[n] = score
+                        }
+                        Outcome.Ok(out)
+                    }
+                }
+            } catch (e: Exception) {
+                Outcome.Error("No connection to the hiscores (${e.javaClass.simpleName}).")
+            }
+            main.post { onDone(outcome) }
+        }
+    }
+
+    private val NOT_BOSSES = setOf(
+        "League Points", "Deadman Points", "Bounty Hunter - Hunter", "Bounty Hunter - Rogue",
+        "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue", "LMS - Rank", "PvP Arena - Rank",
+        "Soul Wars Zeal", "Rifts closed", "Colosseum Glory", "Collections Logged"
+    )
+
     /** One achievement diary tier from WikiSync, e.g. Ardougne Hard: 7 of 10 tasks. */
     data class DiaryTier(val region: String, val tier: String, val complete: Boolean, val done: Int, val total: Int)
 

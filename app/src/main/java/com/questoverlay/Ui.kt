@@ -257,6 +257,21 @@ class CompassView(context: Context) : View(context) {
             invalidate()
         }
 
+    /**
+     * Live mode (the minimap says where you are): the needle points this many degrees clockwise
+     * from screen-up, and the letters turn so N matches the game's compass ([northAngle]).
+     */
+    var screenAngle: Float? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var northAngle: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -291,22 +306,32 @@ class CompassView(context: Context) : View(context) {
             labelPaint.color = color
             canvas.drawText(s, x, y, labelPaint)
         }
-        letter("N", cx, cy - r + inset, Ui.RED)
-        letter("S", cx, cy + r - inset + labelPaint.textSize * 0.7f, Ui.TAN)
-        letter("E", cx + r - inset + Ui.dpf(context, 1f), cy + base, Ui.TAN)
-        letter("W", cx - r + inset - Ui.dpf(context, 1f), cy + base, Ui.TAN)
+        val live = screenAngle
+        if (live != null) {
+            // Letters around the rim, turned like the game's compass.
+            val ring = r - inset + labelPaint.textSize * 0.3f
+            for ((i, l) in listOf("N", "E", "S", "W").withIndex()) {
+                val a = Math.toRadians((northAngle + i * 90f).toDouble())
+                letter(l, cx + (ring * kotlin.math.sin(a)).toFloat(), cy - (ring * kotlin.math.cos(a)).toFloat() + base, if (i == 0) Ui.RED else Ui.TAN)
+            }
+        } else {
+            letter("N", cx, cy - r + inset, Ui.RED)
+            letter("S", cx, cy + r - inset + labelPaint.textSize * 0.7f, Ui.TAN)
+            letter("E", cx + r - inset + Ui.dpf(context, 1f), cy + base, Ui.TAN)
+            letter("W", cx - r + inset - Ui.dpf(context, 1f), cy + base, Ui.TAN)
+        }
 
         when {
-            dir.isCompass -> {
+            live != null || dir.isCompass -> {
                 canvas.save()
-                canvas.rotate(dir.degrees, cx, cy)
+                canvas.rotate(live ?: dir.degrees, cx, cy)
                 // Red front half, white back half: the classic compass needle.
                 path.reset()
                 path.moveTo(cx, cy - r * 0.62f)
                 path.lineTo(cx + r * 0.16f, cy)
                 path.lineTo(cx - r * 0.16f, cy)
                 path.close()
-                fillPaint.color = Ui.RED
+                fillPaint.color = if (live != null) Ui.GREEN else Ui.RED
                 canvas.drawPath(path, fillPaint)
                 path.reset()
                 path.moveTo(cx, cy + r * 0.45f)

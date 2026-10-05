@@ -83,9 +83,115 @@ data class ScreenFacts(
     val options: List<OcrLine> = emptyList(),
     /** Names we were looking for that appear in a tap menu ("Talk-to Cook"). */
     val menuNames: Set<String> = emptySet(),
-    /** Game messages in the chat box ("You pick some wheat."). */
-    val messages: List<String> = emptyList()
+    /** Game messages in the chat box ("You pick some wheat."), timestamps removed, wrapped lines joined. */
+    val messages: List<String> = emptyList(),
+    /** "Well done! You have completed an easy task in the Ardougne area." */
+    val diaryTask: DiaryTaskDone? = null,
+    /** "Your Vorkath kill count is: 413." Several can be on screen at once. */
+    val killCounts: List<KillCount> = emptyList(),
+    /** The chat messages with their times ("1829"), for telling a new message from an old one. */
+    val timedMessages: List<Pair<String?, String>> = emptyList()
 )
+
+/**
+ * A diary message: one task done, or (allTasks) the whole tier. [key] includes the chat time, so
+ * the same wording seen again later counts as a new message.
+ */
+data class DiaryTaskDone(val tier: String, val region: String, val allTasks: Boolean = false, val key: String = "")
+
+data class KillCount(val boss: String, val count: Int)
+
+/**
+ * Reads the chat box. On the phone it sits top-left and every line starts with a time
+ * ("[18:29] You plant the maple sapling…"); long messages wrap onto a second line without one.
+ */
+object Chat {
+    // A little junk may come first (the chat's scroll bar gets read as "|" or "#").
+    private val TIMESTAMP = Regex("""^[^\w\[(]{0,3}\w?[^\w\[(]{0,2}[\[(|]?\s*\d{1,2}\s*[:;.]\s*\d{2}\s*[\])|]?\s*""")
+    private val MANGLED_TIME = Regex("""^.{0,8}?\]\s*""")
+    private val GAME_STARTS = listOf("you ", "your ", "well done", "congratulations", "oh dear", "the ")
+
+    /** "[18:29] You plant…" → (true, "You plant…"). */
+    fun stripTime(text: String): Pair<Boolean, String> {
+        val m = TIMESTAMP.find(text) ?: return false to text.trim()
+        // A bare number on its own isn't a timestamp ("99" next to the HP orb).
+        if (m.value.none { it == ':' || it == ';' || it == '.' }) return false to text.trim()
+        return true to text.substring(m.range.last + 1).trim()
+    }
+
+    /**
+     * Chat lines, oldest first. [skip] are line indexes to ignore (the dialogue box).
+     * Lines with a timestamp are chat wherever they are; lines without one count only if they
+     * continue the line above (a wrapped message) or read like a game message on the left side.
+     */
+    fun messages(lines: List<OcrLine>, skip: Set<Int> = emptySet()): List<String> = timed(lines, skip).map { it.second }
+
+    /** Like [messages], with each message's time ("18:29") when it had one. */
+    fun timed(lines: List<OcrLine>, skip: Set<Int> = emptySet()): List<Pair<String?, String>> {
+        val left = lines.indices.filter { it !in skip && lines[it].left < 0.5f }.sortedBy { lines[it].top }
+        val out = ArrayList<Pair<String?, String>>()
+        // Wrapped messages fill the chat box to its right edge before wrapping.
+        val timedLines = left.filter { stripTime(lines[it].text).first }
+        val chatLeft = timedLines.minOfOrNull { lines[it].left } ?: 0f
+        val chatRight = timedLines.maxOfOrNull { lines[it].right } ?: 0f
+        var lastIdx = -1
+        for (i in left) {
+            val l = lines[i]
+            var (hasTime, text) = stripTime(l.text)
+            val time = if (hasTime) TIMESTAMP.find(l.text)?.value?.filter { it.isDigit() } else null
+            if (!hasTime) {
+                // A timestamp read too badly to parse ("Figg] tou plant…") still starts a new message.
+                MANGLED_TIME.find(text)?.let {
+                    hasTime = true
+                    text = text.substring(it.range.last + 1).trim()
+                }
+            }
+            if (text.isEmpty()) continue
+            val prev = if (lastIdx >= 0) lines[lastIdx] else null
+            val continues = prev != null && !hasTime && out.isNotEmpty() &&
+                prev.right - chatLeft >= (chatRight - chatLeft) * 0.85f &&
+                l.top - prev.bottom < (prev.bottom - prev.top) * 0.9f && l.top > prev.top &&
+                kotlin.math.abs(l.left - prev.left) < 0.03f
+            when {
+                continues -> out[out.size - 1] = out.last().first to (out.last().second + " " + text)
+                hasTime -> out.add(time to text)
+                GAME_STARTS.any { Fuzzy.norm(text).startsWith(it.trim()) } && Fuzzy.words(text).size >= 3 -> out.add(null to text)
+                else -> { lastIdx = -1; continue }
+            }
+            lastIdx = i
+        }
+        return out
+    }
+
+    private val DIARY = Regex("""completed an? (easy|medium|hard|elite) task in the (.+?) area""")
+    private val DIARY_ALL = Regex("""completed all (?:of )?the (easy|medium|hard|elite) tasks in the (.+?) area""")
+
+    fun diaryTask(message: String, time: String? = null): DiaryTaskDone? {
+        val n = Fuzzy.norm(message)
+        DIARY_ALL.find(n)?.let { return DiaryTaskDone(it.groupValues[1], it.groupValues[2], true, "${time ?: ""}|$n") }
+        val m = DIARY.find(n) ?: return null
+        return DiaryTaskDone(m.groupValues[1], m.groupValues[2], false, "${time ?: ""}|$n")
+    }
+
+    /** "Lumbridge & Draynor" and the OCR'd "lumbridge draynor" are the same region. */
+    fun sameRegion(a: String, b: String): Boolean {
+        val x = Fuzzy.norm(a).replace(" ", "")
+        val y = Fuzzy.norm(b).replace(" ", "")
+        return x == y || Fuzzy.ratio(x, y) >= 0.8
+    }
+
+    private val KC = Regex("""your (.+?) (?:kill|chest|completion|completed|success) count is (\d[\d ,]*)""")
+    private val KC2 = Regex("""your completed (.+?) count is (\d[\d ,]*)""")
+
+    fun killCount(message: String): KillCount? {
+        val n = Fuzzy.norm(message).replace(Regex("(?<=\\d) (?=\\d)"), "")
+        val m = KC2.find(n) ?: KC.find(n) ?: return null
+        val count = m.groupValues[2].filter { it.isDigit() }.toIntOrNull() ?: return null
+        val boss = m.groupValues[1].trim()
+        if (boss.isEmpty() || boss.length > 40) return null
+        return KillCount(boss, count)
+    }
+}
 
 /**
  * Turns lines of text read off the game screen into [ScreenFacts]. It knows the game's wording
@@ -174,12 +280,9 @@ object ScreenSense {
             }
         }
 
-        // Chat messages: lower-left area, outside the dialogue box, reading like a game message.
-        val boxSet = boxLines.toHashSet()
-        val messages = lines.indices
-            .filter { it !in boxSet && lines[it].centerX < 0.7f && lines[it].centerY > 0.5f }
-            .map { lines[it].text.trim() }
-            .filter { Fuzzy.norm(it).startsWith("you ") || Fuzzy.norm(it).startsWith("your ") }
+        // Chat messages: anywhere on the left half outside the dialogue box (top-left on phones).
+        val timed = Chat.timed(lines, boxLines.toHashSet())
+        val messages = timed.map { it.second }
 
         return ScreenFacts(
             questComplete = complete,
@@ -187,7 +290,10 @@ object ScreenSense {
             speaker = speaker,
             options = options,
             menuNames = menuNames,
-            messages = messages
+            messages = messages,
+            diaryTask = timed.asReversed().firstNotNullOfOrNull { (t, m) -> Chat.diaryTask(m, t) },
+            killCounts = messages.mapNotNull { Chat.killCount(it) },
+            timedMessages = timed
         )
     }
 }

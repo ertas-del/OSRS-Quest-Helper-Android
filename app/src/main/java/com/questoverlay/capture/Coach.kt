@@ -11,8 +11,15 @@ data class CoachContext(
     /** The current step, or null when the quest is already finished. */
     val step: StepInfo?,
     /** The next couple of steps, for noticing you've already moved on. */
-    val upcoming: List<StepInfo>
+    val upcoming: List<StepInfo>,
+    /** Diaries: region ("Ardougne"), tier ("Easy"), where the next task starts and where the reward step is. */
+    val diaryRegion: String = "",
+    val diaryTier: String = "",
+    val nextTaskIndex: Int? = null,
+    val lastTaskIndex: Int? = null
 ) {
+    val isDiary: Boolean get() = diaryRegion.isNotEmpty()
+
     val key: String get() = "$questId#${step?.index ?: stepCount}"
 
     /** Names worth looking for on screen: this step's NPC first, then the next steps'. */
@@ -59,12 +66,15 @@ class Coach(
     private var aheadIndex = -1
     private var aheadFrames = 0
     private var offered = HashSet<String>()
+    private var arrivalFrames = 0
 
     // Across steps.
     private var completeFrames = 0
     private val completedQuests = HashSet<String>()
     private val dismissed = HashSet<String>()
     private val lastSpoken = HashMap<String, Long>()
+    /** Diary messages already on screen when a step began, or already acted on. */
+    private val seenDiary = HashSet<String>()
 
     /** The player answered ✕ to a suggestion: don't ask the same thing again for this step. */
     fun dismiss(ctx: CoachContext, s: Suggestion) {
@@ -74,12 +84,15 @@ class Coach(
     fun onFrame(facts: ScreenFacts, ctx: CoachContext): CoachOutput {
         if (ctx.key != stepKey) {
             stepKey = ctx.key
+            // Whatever diary message is showing now belongs to before this step.
+            facts.diaryTask?.let { seenDiary.add(it.key) }
             talkingFrames = 0
             talkedToNpc = false
             closedFrames = 0
             aheadIndex = -1
             aheadFrames = 0
             offered = HashSet()
+            arrivalFrames = 0
         }
 
         // 1. Quest complete: finish it (once per quest).
@@ -151,9 +164,37 @@ class Coach(
             }
         }
 
+        // 6. Diaries: "You have completed an easy task in the Ardougne area" ticks this task.
+        val dt = facts.diaryTask
+        if (ctx.isDiary && dt != null && dt.key !in seenDiary &&
+            dt.tier.equals(ctx.diaryTier, ignoreCase = true) && Chat.sameRegion(dt.region, ctx.diaryRegion)
+        ) {
+            seenDiary.add(dt.key)
+            val target = if (dt.allTasks) ctx.lastTaskIndex ?: ctx.stepCount else ctx.nextTaskIndex ?: ctx.stepCount
+            val text = if (dt.allTasks) "All ${ctx.diaryTier.lowercase()} tasks done! Go claim the reward?"
+                else "Diary task done! Move to the next task?"
+            offer(ctx, Suggestion(Suggestion.Kind.TICK, text, target))?.let {
+                suggestion = it
+                speak = say("diary:${dt.key}", if (dt.allTasks) "Diary complete" else "Diary task done")
+            }
+        }
+
         if (suggestion != null && speak == null) speak = say("suggest:${ctx.key}:${suggestion.kind}", "Step looks done")
         if (pick != null && status == null) status = "Pick: $pick"
         return CoachOutput(status = status, suggestion = suggestion, highlight = highlight, pick = pick, speak = speak)
+    }
+
+    /**
+     * The minimap says you're standing at this step's spot. Two looks in a row there ask
+     * "Looks done?" (only for steps that aren't conversations; those close on their own).
+     */
+    fun onArrival(ctx: CoachContext, atSpot: Boolean): CoachOutput {
+        if (ctx.key != stepKey) return CoachOutput()
+        val step = ctx.step ?: return CoachOutput()
+        arrivalFrames = if (atSpot) arrivalFrames + 1 else 0
+        if (step.npc.isNotBlank() || arrivalFrames < confirmFrames) return CoachOutput()
+        val s = offer(ctx, Suggestion(Suggestion.Kind.TICK, "Looks done: you've reached the spot. Tick it?", step.index + 1)) ?: return CoachOutput()
+        return CoachOutput(suggestion = s, speak = say("arrive:${ctx.key}", "You're there"))
     }
 
     /** Each question is asked once per step, and never again after ✕. */
