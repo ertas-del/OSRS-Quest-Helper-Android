@@ -115,6 +115,24 @@ class Advisor(
         return out
     }
 
+    /**
+     * The requirement lines of [q] (as the quest data words them) that you don't meet yet, for
+     * showing "what's still needed". Unlike [missing], an unknown level or combat level counts as
+     * not met, so nothing is hidden when the account hasn't been loaded; lines we can't check stay.
+     */
+    fun unmet(q: Quest): List<String> = q.requirements.filter { r ->
+        when (val req = Req.parse(r)) {
+            is Req.Skill -> (levels[req.skill] ?: 0) < req.level
+            is Req.QuestDone -> {
+                val k = QuestNames.canon(req.quest)
+                !(k in done || (req.startedIsEnough && k in started))
+            }
+            is Req.QuestPoints -> done.isEmpty() || questPoints < req.points
+            is Req.Combat -> (combat ?: 0) < req.level
+            is Req.Other -> true
+        }
+    }
+
     /** Levels still to gain for [q], or null if anything other than skills is missing. */
     fun skillGap(q: Quest): Int? {
         var gap = 0

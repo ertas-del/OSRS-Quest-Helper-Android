@@ -62,6 +62,8 @@ import com.questoverlay.location.LocatorStatus
 import com.questoverlay.location.LocatorStore
 import com.questoverlay.location.Pixels
 import com.questoverlay.location.WorldMaps
+import com.questoverlay.account.Advisor
+import com.questoverlay.account.Req
 import com.questoverlay.sailing.NavTarget
 import com.questoverlay.sailing.SailPlanner
 import com.questoverlay.sailing.SailingData
@@ -155,6 +157,8 @@ class OverlayService : Service() {
     private var navCompass: CompassView? = null
     private var navLabel: TextView? = null
     private var sailPicker = false
+    /** Diary step list: also show the steps already behind you (off by default). */
+    private var showDoneSteps = false
 
     private val watching: Boolean get() = watcher?.running == true
 
@@ -1340,9 +1344,15 @@ class OverlayService : Service() {
         }
 
         if (q.requirements.isNotEmpty()) {
-            heading(list, "Requirements")
-            for (r in q.requirements) {
-                val t = Ui.text(this, "• $r", 12f, Ui.TEXT)
+            // Only what you still need: met levels and finished quests are left out.
+            val unmet = Advisor(QuestRepository.questsOnly(this), travel.levels, travel.completedQuests, travel.startedQuests).unmet(q)
+            heading(list, if (unmet.size < q.requirements.size) "Still needed" else "Requirements")
+            if (unmet.isEmpty()) {
+                list.addView(Ui.text(this, "You meet every requirement \u2713", 12f, Ui.GREEN))
+            }
+            for (r in unmet) {
+                val have = Req.parse(r).let { req -> if (req is Req.Skill) travel.levels[req.skill] else null }
+                val t = Ui.text(this, "• $r" + if (have != null) " (you have $have)" else "", 12f, Ui.TEXT)
                 t.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 2))
                 list.addView(t)
             }
@@ -1357,9 +1367,20 @@ class OverlayService : Service() {
         val list = LinearLayout(this)
         list.orientation = LinearLayout.VERTICAL
         var currentRow: View? = null
+        // Diaries: steps already behind you are hidden (tap the line at the top to bring them back).
+        val hideDone = q.isDiary && !showDoneSteps && step > 0 && step < q.steps.size
+        if (q.isDiary && step > 0 && step < q.steps.size) {
+            val toggle = Ui.text(this, if (hideDone) "$step earlier steps hidden \u00B7 show" else "Hide the steps you've done", 12f, Ui.TAN, bold = true)
+            toggle.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 6))
+            toggle.setOnClickListener { showDoneSteps = !showDoneSteps; render() }
+            list.addView(toggle)
+        }
 
         q.steps.forEachIndexed { index, s ->
+            if (hideDone && index < step) return@forEachIndexed
+            // Keep a task's heading with its remaining steps, even when it's already under way.
             if (s.section.isNotBlank()) heading(list, s.section)
+            else if (hideDone && index == step) q.sectionOf(index).takeIf { it.isNotBlank() }?.let { heading(list, it) }
 
             val row = LinearLayout(this)
             row.orientation = LinearLayout.HORIZONTAL

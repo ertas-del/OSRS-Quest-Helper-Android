@@ -506,8 +506,10 @@ class MainActivity : Activity() {
             .joinToString(" · ")
         c.addView(Ui.text(this, meta, 12f, Ui.TAN))
 
-        if (q.requirements.isNotEmpty()) {
-            val req = Ui.text(this, "Needs: " + q.requirements.joinToString(", "), 12f, Ui.MUTED)
+        val unmet = if (q.requirements.isEmpty()) emptyList() else
+            Advisor(QuestRepository.questsOnly(this), travel.levels, travel.completedQuests, travel.startedQuests).unmet(q)
+        if (unmet.isNotEmpty()) {
+            val req = Ui.text(this, "Still needed: " + unmet.joinToString(", "), 12f, Ui.MUTED)
             req.maxLines = 2
             req.ellipsize = TextUtils.TruncateAt.END
             req.setPadding(0, Ui.dp(this, 4), 0, 0)
