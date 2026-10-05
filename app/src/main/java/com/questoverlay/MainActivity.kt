@@ -116,6 +116,7 @@ class MainActivity : Activity() {
         fanMade.setPadding(0, 0, 0, Ui.dp(this, 14))
         content.addView(fanMade)
 
+        if (!Authenticity.isOfficial(this)) content.addView(unofficialCard())
         content.addView(permissionCard())
         content.addView(opacityCard())
         content.addView(travelCard())
@@ -332,6 +333,30 @@ class MainActivity : Activity() {
         return c
     }
 
+    /** Shown when this copy isn't signed with the Breadcrumbs release key. */
+    private fun unofficialCard(): View {
+        val c = card()
+        c.background = Ui.rounded(this, Ui.CARD_BG, 14, Ui.RED, 2)
+        c.addView(Ui.text(this, "Unofficial copy", 16f, Ui.RED, bold = true))
+        val why = Ui.text(
+            this,
+            "This copy of Breadcrumbs wasn't published by its developer, so it may have been changed. " +
+                "The real app is free, with no ads, from the official site.",
+            12f,
+            Ui.TEXT
+        )
+        why.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 8))
+        c.addView(why)
+        c.addView(Ui.button(this, "Get the official app", true) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(OFFICIAL_SITE)))
+            } catch (e: Exception) {
+                Toast.makeText(this, OFFICIAL_SITE, Toast.LENGTH_LONG).show()
+            }
+        })
+        return c
+    }
+
     private fun permissionCard(): View {
         val c = card()
         if (Settings.canDrawOverlays(this)) {
@@ -524,6 +549,7 @@ class MainActivity : Activity() {
         val SPACES = Regex("\\s+")
         const val REQUEST_NOTIFICATIONS = 100
         const val KOFI_URL = "https://ko-fi.com/breadcrumbsqh"
+        const val OFFICIAL_SITE = "https://ertas-del.github.io/Breadcrumbs/"
         /** Wording required by Jagex's Fan Content Policy. */
         const val JAGEX_DISCLAIMER =
             "Created using intellectual property belonging to Jagex Limited under the terms of " +

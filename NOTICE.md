@@ -1,5 +1,8 @@
 # Third-party notices
 
+Breadcrumbs itself is licensed under the PolyForm Strict License 1.0.0 (see `LICENSE.md`).
+The files below come from other projects and stay under their own licences.
+
 ## RuneLite Quest Helper
 
 Quest steps, item lists, requirements and map tiles in `app/src/main/assets/quests.json`

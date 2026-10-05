@@ -1,0 +1,53 @@
+name: Publish website
+
+# Copies the website (docs/), the public README and the licence to the public downloads repo,
+# so this source repo can stay private. Needs the PUBLIC_REPO_TOKEN secret: a fine-grained
+# token with "Contents: Read and write" on ertas-del/Breadcrumbs only.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "public/**"
+      - "LICENSE.md"
+      - "NOTICE.md"
+      - ".github/workflows/publish-site.yml"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Copy the site to the public repo
+        env:
+          PUBLIC_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          PUBLIC_REPO: ertas-del/Breadcrumbs
+        run: |
+          if [ -z "$PUBLIC_TOKEN" ]; then
+            echo "::notice::No PUBLIC_REPO_TOKEN secret yet; the website is still served from this repo."
+            exit 0
+          fi
+          DEST="$RUNNER_TEMP/public"
+          git clone --depth 1 "https://x-access-token:${PUBLIC_TOKEN}@github.com/${PUBLIC_REPO}.git" "$DEST"
+          rm -rf "$DEST/docs"
+          cp -R docs "$DEST/docs"
+          cp public/README.md "$DEST/README.md"
+          cp LICENSE.md NOTICE.md "$DEST/"
+          mkdir -p "$DEST/.github" && cp .github/FUNDING.yml "$DEST/.github/FUNDING.yml"
+          # Links to this (private) repo become links to the public one.
+          find "$DEST/docs" -name '*.html' -print0 | xargs -0 sed -i \
+            -e "s#ertas-del.github.io/OSRS-Quest-Helper-Android#ertas-del.github.io/Breadcrumbs#g" \
+            -e "s#ertas-del/OSRS-Quest-Helper-Android#${PUBLIC_REPO}#g"
+          cd "$DEST"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "::notice::Website already up to date"
+          else
+            git commit -q -m "Update website from ${GITHUB_SHA::7}"
+            git push -q origin HEAD
+            echo "::notice::Website copied to ${PUBLIC_REPO}"
+          fi

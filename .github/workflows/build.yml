@@ -147,13 +147,32 @@ jobs:
       # .../releases/latest/download/Breadcrumbs.apk always points at the newest APK and
       # update checkers such as Obtainium see a real version number. Only the newest 10 are kept.
       # Needs Settings > Actions > General > Workflow permissions > "Read and write".
+      # Readable crash reports need this file (it maps the scrambled names back). Kept private.
+      - name: Upload R8 mapping as a workflow artifact
+        if: steps.signing.outputs.signed == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: Breadcrumbs-r8-mapping
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: ignore
+
+      # Releases go to the public downloads repo (ertas-del/Breadcrumbs) once the
+      # PUBLIC_REPO_TOKEN secret exists, so this source repo can be private. Until then they go
+      # here, as before. Only the newest 10 releases are kept.
       - name: Publish release
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLIC_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          PUBLIC_REPO: ertas-del/Breadcrumbs
           SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
+          if [ -n "$PUBLIC_TOKEN" ]; then
+            export GH_TOKEN="$PUBLIC_TOKEN"; TARGET="$PUBLIC_REPO"; TARGET_ARGS=()
+          else
+            export GH_TOKEN="$OWN_TOKEN"; TARGET="$GITHUB_REPOSITORY"; TARGET_ARGS=(--target "$GITHUB_SHA")
+          fi
           VERSION="0.2.$GITHUB_RUN_NUMBER"
           SUBJECT=$(git log -1 --pretty=%s)
           if [ "$SIGNED" = "true" ]; then KEY="Signed with the Breadcrumbs release key."; else KEY="Signed with the shared debug key."; fi
@@ -167,10 +186,9 @@ jobs:
           sed -i 's/^          //' "$RUNNER_TEMP/notes.md"
           # Public releases carry only the APK. The Play bundle stays in the run's artifacts.
           gh release create "v$VERSION" "$RUNNER_TEMP/Breadcrumbs.apk" \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
+            --repo "$TARGET" "${TARGET_ARGS[@]}" --latest \
             --title "Breadcrumbs $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
-          # The old single "latest" release from earlier builds.
-          gh release delete latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
-          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt \
+          echo "::notice::Published Breadcrumbs $VERSION to $TARGET"
+          gh release list --repo "$TARGET" --limit 100 --json tagName,createdAt \
             --jq 'map(select(.tagName | startswith("v0."))) | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
-            | while read -r old; do gh release delete "$old" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true; done
+            | while read -r old; do gh release delete "$old" --yes --cleanup-tag --repo "$TARGET" || true; done

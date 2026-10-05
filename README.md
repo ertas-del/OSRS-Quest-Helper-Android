@@ -122,28 +122,12 @@ puzzle in the quest is on the Puzzle tab.
 
 Every release is listed on the [Releases page](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases).
 
-## Build your own copy (no PC needed)
+## How builds work
 
-GitHub builds the app for you for free.
-
-1. **Make a repo.** Sign in at github.com in Chrome, tap **+ → New repository**, give it a name, and tap **Create**.
-2. **Upload the project.** In the repo, tap **Add file → Upload files**, pick `questoverlay.zip`, and commit it.
-   (If the upload button is missing, open Chrome's ⋮ menu and turn on **Desktop site**.)
-3. **Add the build recipe.** Tap **Add file → Create new file** and name it exactly
-   `.github/workflows/build.yml`
-   Paste in the contents of `build.yml`, then tap **Commit**.
-4. **Let it publish releases (one time).** Go to **Settings → Actions → General → Workflow permissions**, choose **Read and write permissions**, and tap **Save**.
-5. **Wait a few minutes.** The **Actions** tab shows the build. A green tick means it worked.
-6. **Download the APK.** On the repo's main page, tap **Releases**, then the newest release marked **Latest**, then **Breadcrumbs.apk**.
-   *Backup:* open the finished run in **Actions** and download **Breadcrumbs-apk** under **Artifacts**. It's a zip with the APK inside.
-7. **Install it.** Open the download and allow installs from Chrome when Android asks.
-   Play Protect may warn you because the app isn't from the Play Store. Choose **Install anyway**.
+Every push to `main` builds the app in GitHub Actions, refreshes the quest and travel data, signs it and publishes a numbered release. To refresh the data without changing anything, open **Actions → Build APK → Run workflow**.
 
 ### Release signing
-Builds are signed with a private release key, kept encrypted in `signing/release.jks.enc`. The build unlocks it with a repository secret named `RELEASE_PASSWORD` (**Settings → Secrets and variables → Actions**). Without that secret, a copy of the repo still builds, signed with the shared debug key in `app/debug.keystore`. Android only installs an update over an app signed with the same key.
-
-### Updating
-Upload the new `questoverlay.zip` over the old one, or edit any file in the repo. Each change starts a new build. To refresh the quest data without changing anything, open **Actions → Build APK → Run workflow**.
+Builds are signed with a private release key, kept encrypted in `signing/release.jks.enc`. The build unlocks it with a repository secret named `RELEASE_PASSWORD` (**Settings → Secrets and variables → Actions**). Without that secret the build falls back to the debug key in `app/debug.keystore`. Android only installs an update over an app signed with the same key, and the app warns when it isn't signed with the release key (see below).
 
 ---
 
@@ -240,6 +224,10 @@ docs/                             the download page and privacy policy (GitHub P
 ## Support
 
 Breadcrumbs is free and nothing is locked. If it helps you, you can [leave a tip on Ko-fi](https://ko-fi.com/breadcrumbsqh). Tips don't unlock anything; they help keep the quest data and travel routes up to date.
+
+## Licence
+
+Breadcrumbs is licensed under the [PolyForm Strict License 1.0.0](LICENSE.md): you can use it for non-commercial purposes, but you can't redistribute it, publish it to an app store, or share modified versions. The quest data, travel data and font keep their own open licences, listed in `NOTICE.md`.
 
 ## Credits
 
