@@ -30,6 +30,11 @@
         </activity>
 
         <activity
+            android:name=".AccountActivity"
+            android:exported="false"
+            android:label="Your account" />
+
+        <activity
             android:name=".TravelSettingsActivity"
             android:exported="false"
             android:label="Travel settings" />

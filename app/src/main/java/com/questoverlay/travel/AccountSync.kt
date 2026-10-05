@@ -11,7 +11,8 @@ import java.util.concurrent.Executors
 /**
  * Reads public account data. Nothing here touches the game:
  *  - levels come from Jagex's own public hiscores
- *  - finished quests come from WikiSync, which is filled in when you play on RuneLite (PC)
+ *  - finished quests and diary progress come from WikiSync, which is filled in when you play on
+ *    RuneLite (PC)
  */
 object AccountSync {
 
@@ -50,8 +51,8 @@ object AccountSync {
                             // Unranked skills come back as -1: we don't know the level, so don't filter on it.
                             if (lvl >= 1) levels[skill] = lvl
                         }
-                        levels.remove("Overall")
-                        if (levels.isEmpty()) Outcome.Error("Couldn't read the hiscores reply.") else Outcome.Ok(levels)
+                        // "Overall" is the total level; it isn't a skill, but the account screen shows it.
+                        if (levels.keys.none { it != "Overall" }) Outcome.Error("Couldn't read the hiscores reply.") else Outcome.Ok(levels)
                     }
                 }
             } catch (e: Exception) {
@@ -61,11 +62,22 @@ object AccountSync {
         }
     }
 
-    /** Finished quests (and levels) from WikiSync. Only works if the player uses RuneLite's WikiSync plugin. */
-    fun fetchWikiSync(username: String, onDone: (Outcome<Pair<Set<String>, Map<String, Int>>>) -> Unit) {
+    /** One achievement diary tier from WikiSync, e.g. Ardougne Hard: 7 of 10 tasks. */
+    data class DiaryTier(val region: String, val tier: String, val complete: Boolean, val done: Int, val total: Int)
+
+    /** What WikiSync knows about an account. Quest names are as WikiSync spells them. */
+    data class WikiSyncData(
+        val finished: Set<String>,
+        val started: Set<String>,
+        val levels: Map<String, Int>,
+        val diaries: List<DiaryTier>
+    )
+
+    /** Quests, levels and diaries from WikiSync. Only works if the player uses RuneLite's WikiSync plugin. */
+    fun fetchWikiSync(username: String, onDone: (Outcome<WikiSyncData>) -> Unit) {
         val name = username.trim()
         worker.execute {
-            val outcome: Outcome<Pair<Set<String>, Map<String, Int>>> = try {
+            val outcome: Outcome<WikiSyncData> = try {
                 val url = "https://sync.runescape.wiki/runelite/player/" + enc(name).replace("+", "%20") + "/STANDARD"
                 val (code, body) = get(url)
                 if (code != 200) {
@@ -74,25 +86,46 @@ object AccountSync {
                         else "WikiSync answered with error $code. Try again later."
                     )
                 } else {
-                    val json = JSONObject(body)
-                    val done = HashSet<String>()
-                    json.optJSONObject("quests")?.let { q ->
-                        for (key in q.keys()) if (q.optInt(key, 0) == 2) done.add(key)
-                    }
-                    val levels = HashMap<String, Int>()
-                    json.optJSONObject("levels")?.let { l ->
-                        for (key in l.keys()) {
-                            val lvl = l.optInt(key, 0)
-                            if (lvl > 0) levels[key.lowercase().replaceFirstChar { it.uppercase() }] = lvl
-                        }
-                    }
-                    Outcome.Ok(done to levels)
+                    Outcome.Ok(parseWikiSync(JSONObject(body)))
                 }
             } catch (e: Exception) {
                 Outcome.Error("No connection to WikiSync (${e.javaClass.simpleName}).")
             }
             main.post { onDone(outcome) }
         }
+    }
+
+    fun parseWikiSync(json: JSONObject): WikiSyncData {
+        val finished = HashSet<String>()
+        val started = HashSet<String>()
+        json.optJSONObject("quests")?.let { q ->
+            for (key in q.keys()) when (q.optInt(key, 0)) {
+                2 -> finished.add(key)
+                1 -> started.add(key)
+            }
+        }
+        val levels = HashMap<String, Int>()
+        json.optJSONObject("levels")?.let { l ->
+            for (key in l.keys()) {
+                val lvl = l.optInt(key, 0)
+                if (lvl > 0) levels[key.lowercase().replaceFirstChar { it.uppercase() }] = lvl
+            }
+        }
+        val diaries = ArrayList<DiaryTier>()
+        json.optJSONObject("achievement_diaries")?.let { regions ->
+            for (region in regions.keys()) {
+                val tiers = regions.optJSONObject(region) ?: continue
+                for (tier in tiers.keys()) {
+                    val t = tiers.optJSONObject(tier) ?: continue
+                    val tasks = t.optJSONArray("tasks")
+                    var doneCount = 0
+                    val total = tasks?.length() ?: 0
+                    for (i in 0 until total) if (tasks!!.optBoolean(i, false)) doneCount++
+                    diaries.add(DiaryTier(region, tier, t.optBoolean("complete", false), doneCount, total))
+                }
+            }
+        }
+        return WikiSyncData(finished, started, levels, diaries)
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")

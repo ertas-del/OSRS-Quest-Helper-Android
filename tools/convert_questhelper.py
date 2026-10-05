@@ -617,7 +617,7 @@ def method_list_entries(src, method):
     while i < e:
         tv = t[i]
         # List.of( ... ) / Arrays.asList( ... )
-        if tv.kind == "id" and tv.val in ("of", "asList") and i + 1 < e and t[i + 1].val == "(":
+        if tv.kind == "id" and tv.val in ("of", "asList", "singletonList") and i + 1 < e and t[i + 1].val == "(":
             args, close = split_args(t, i + 1)
             entries.extend(args)
             i = close
@@ -645,6 +645,19 @@ def extract_items(src):
 
 def pretty_enum(name):
     return name.replace("_", " ").title()
+
+
+def extract_quest_points(src):
+    """Quest points the quest awards (getQuestPointReward), or 0."""
+    body = src.method_body("getQuestPointReward")
+    if not body:
+        return 0
+    s, e = body
+    t = src.toks
+    for i in range(s, e - 2):
+        if t[i].val == "QuestPointReward" and t[i + 1].val == "(" and t[i + 2].kind == "num":
+            return int(t[i + 2].val)
+    return 0
 
 
 def extract_requirements(src, quest_names):
@@ -842,6 +855,7 @@ def convert(qh_root):
             "name": quest_names[enum_name],
             "type": {"F2P": "Free", "P2P": "Members", "MINIQUEST": "Miniquest"}[typ],
             "difficulty": diff.replace("_", " ").title() if diff != "MINIQUEST" else "Miniquest",
+            "qp": extract_quest_points(src),
             "requirements": reqs,
             "wikiUrl": urls.get(enum_name, ""),
             "items": items,

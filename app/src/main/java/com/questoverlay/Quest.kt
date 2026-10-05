@@ -68,7 +68,9 @@ data class Quest(
     val requirements: List<String>,
     val wikiUrl: String,
     val items: List<Item>,
-    val steps: List<Step>
+    val steps: List<Step>,
+    /** Quest points awarded (0 for miniquests). */
+    val qp: Int = 0
 ) {
     val requiredItems: List<Item> get() = items.filter { !it.recommended }
     val recommendedItems: List<Item> get() = items.filter { it.recommended }
@@ -164,7 +166,8 @@ object QuestRepository {
             requirements = requirements,
             wikiUrl = o.optString("wikiUrl", ""),
             items = items,
-            steps = steps
+            steps = steps,
+            qp = o.optInt("qp", 0)
         )
     }
 }

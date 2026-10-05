@@ -180,10 +180,7 @@ class TravelSettingsActivity : Activity() {
                 if (isDestroyed) return@fetchWikiSync
                 when (outcome) {
                     is AccountSync.Outcome.Ok -> {
-                        val (done, lv) = outcome.value
-                        store.completedQuests = done
-                        store.checkQuests = true
-                        if (lv.isNotEmpty() && store.levels.isEmpty()) store.levels = lv
+                        store.applyWikiSync(outcome.value)
                         build()
                     }
                     is AccountSync.Outcome.Error -> status.text = outcome.message

@@ -65,6 +65,44 @@ class TravelStore(context: Context) {
         get() = prefs.getStringSet("quests_done_v2", null)?.toSet() ?: emptySet()
         set(v) = prefs.edit().putStringSet("quests_done_v2", v.map { QuestNames.canon(it) }.toSet()).apply()
 
+    /** Quests WikiSync says you've started but not finished, in [QuestNames.canon] form. */
+    var startedQuests: Set<String>
+        get() = prefs.getStringSet("quests_started", null)?.toSet() ?: emptySet()
+        set(v) = prefs.edit().putStringSet("quests_started", v.map { QuestNames.canon(it) }.toSet()).apply()
+
+    /** Diary progress from WikiSync. */
+    var diaries: List<AccountSync.DiaryTier>
+        get() {
+            val raw = prefs.getString("diaries", "") ?: ""
+            if (raw.isBlank()) return emptyList()
+            return raw.split('\n').mapNotNull { line ->
+                val p = line.split('|')
+                if (p.size != 5) null
+                else AccountSync.DiaryTier(p[0], p[1], p[2] == "1", p[3].toIntOrNull() ?: 0, p[4].toIntOrNull() ?: 0)
+            }
+        }
+        set(v) = prefs.edit().putString(
+            "diaries",
+            v.joinToString("\n") { "${it.region}|${it.tier}|${if (it.complete) 1 else 0}|${it.done}|${it.total}" }
+        ).apply()
+
+    var wikiSyncUpdated: Long
+        get() = prefs.getLong("wikisync_time", 0L)
+        set(v) = prefs.edit().putLong("wikisync_time", v).apply()
+
+    /**
+     * Saves a WikiSync import. Finished quests are added to what you've marked done in the app
+     * (never removed), and levels are only used when the hiscores haven't been loaded.
+     */
+    fun applyWikiSync(data: AccountSync.WikiSyncData) {
+        completedQuests = completedQuests + data.finished.map { QuestNames.canon(it) }
+        startedQuests = data.started
+        diaries = data.diaries
+        checkQuests = true
+        if (data.levels.isNotEmpty() && levels.keys.none { it != "Overall" }) levels = data.levels
+        wikiSyncUpdated = System.currentTimeMillis()
+    }
+
     fun isQuestDone(name: String): Boolean = completedQuests.contains(QuestNames.canon(name))
 
     fun setQuestDone(name: String, done: Boolean) {

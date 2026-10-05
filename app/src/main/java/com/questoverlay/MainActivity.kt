@@ -26,6 +26,7 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import com.questoverlay.account.Advisor
 import com.questoverlay.travel.TravelMode
 import com.questoverlay.travel.TravelStore
 import kotlin.math.roundToInt
@@ -79,6 +80,20 @@ class MainActivity : Activity() {
         }
 
         if (savedInstanceState == null) requestNotificationPermission()
+        handleStartQuest(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleStartQuest(intent)
+    }
+
+    /** "Start" on the account screen opens this screen with a quest to put in the overlay. */
+    private fun handleStartQuest(intent: Intent?) {
+        val id = intent?.getStringExtra(AccountActivity.EXTRA_START_QUEST) ?: return
+        intent.removeExtra(AccountActivity.EXTRA_START_QUEST)
+        quests.firstOrNull { it.id == id }?.let { startOverlay(it) }
     }
 
     override fun onResume() {
@@ -116,6 +131,7 @@ class MainActivity : Activity() {
         fanMade.setPadding(0, 0, 0, Ui.dp(this, 14))
         content.addView(fanMade)
 
+        content.addView(accountCard())
         if (!Authenticity.isOfficial(this)) content.addView(unofficialCard())
         content.addView(permissionCard())
         content.addView(opacityCard())
@@ -472,6 +488,40 @@ class MainActivity : Activity() {
         return c
     }
 
+    /** A one-glance summary of the account, opening the full "Your account" screen. */
+    private fun accountCard(): View {
+        val c = card()
+        c.addView(Ui.text(this, "Your account", 14f, Ui.TEXT, bold = true))
+        val name = travel.username
+        val advisor = Advisor(quests, travel.levels, travel.completedQuests, travel.startedQuests)
+        if (name.isBlank()) {
+            val sub = Ui.text(this, "Add your RuneScape name to see your levels, quests, diaries and what to do next.", 12f, Ui.TAN)
+            sub.setPadding(0, Ui.dp(this, 2), 0, 0)
+            c.addView(sub)
+        } else {
+            val levels = travel.levels
+            val total = levels["Overall"] ?: levels.filterKeys { it != "Overall" }.values.sum().takeIf { it > 0 }
+            val summary = buildString {
+                append(name)
+                advisor.combat?.let { append(" \u00B7 Combat $it") }
+                total?.let { append(" \u00B7 Total $it") }
+                append(" \u00B7 ${advisor.questPoints}/${advisor.maxQuestPoints} QP")
+            }
+            val sub = Ui.text(this, summary, 12f, Ui.TAN)
+            sub.setPadding(0, Ui.dp(this, 2), 0, 0)
+            c.addView(sub)
+            advisor.ready().firstOrNull()?.let { next ->
+                val n = Ui.text(this, "Next up: ${next.name}", 12f, Ui.TEXT)
+                n.setPadding(0, Ui.dp(this, 2), 0, 0)
+                c.addView(n)
+            }
+        }
+        c.addView(spaced(Ui.button(this, if (name.isBlank()) "Set up your account" else "Open your account", name.isBlank()) {
+            startActivity(Intent(this, AccountActivity::class.java))
+        }, 10))
+        return c
+    }
+
     private fun travelCard(): View {
         val c = card()
         c.addView(Ui.text(this, "Travel guide", 14f, Ui.TEXT, bold = true))
@@ -549,7 +599,7 @@ class MainActivity : Activity() {
         val SPACES = Regex("\\s+")
         const val REQUEST_NOTIFICATIONS = 100
         const val KOFI_URL = "https://ko-fi.com/breadcrumbsqh"
-        const val OFFICIAL_SITE = "https://ertas-del.github.io/Breadcrumbs/"
+        const val OFFICIAL_SITE = "https://ertas-del.github.io/OSRS-Quest-Helper-Android/"
         /** Wording required by Jagex's Fan Content Policy. */
         const val JAGEX_DISCLAIMER =
             "Created using intellectual property belonging to Jagex Limited under the terms of " +

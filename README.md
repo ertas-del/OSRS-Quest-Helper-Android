@@ -31,6 +31,13 @@ It's dressed like the classic in-game interface: bevelled brown stone panels, pi
 - **Stays on screen** in portrait and landscape. Lists shrink to fit and the card can't be dragged off the edge.
 - **Touches outside the card go straight to the game.** It never steals your taps or keyboard.
 
+### Your account
+- **One tap syncs everything:** levels from the official hiscores, finished and in-progress quests and achievement diary progress from WikiSync.
+- **At a glance:** combat level, total level, quest points out of the maximum, and quests done, with every skill level and a diary grid (✓ done, or tasks done out of the total, for each region and tier).
+- **Do next:** the quests you can start right now, with the ones you've started first and then the ones other quests need. Tap **Start** to put one straight into the overlay.
+- **Almost there:** quests held back only by a few levels, with exactly which levels.
+- Quests you finish or mark done in Breadcrumbs count too, so it works without WikiSync.
+
 ### Travel guide
 - **How to get there, for every step.** A real route finder works out the fastest way from where the last step happened to the next one, using:
   - teleport spells on all four spellbooks, plus the home teleport
