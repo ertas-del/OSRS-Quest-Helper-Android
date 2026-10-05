@@ -132,6 +132,8 @@ object Ui {
             bold -> Typeface.create(Typeface.DEFAULT, 600, false)
             else -> Typeface.DEFAULT
         }
+        // The pixel font's "fi" ligature reads like an "A" ("Ko-fi" became "Ko-A").
+        if (title) t.fontFeatureSettings = "'liga' 0, 'clig' 0"
         t.letterSpacing = if (title) 0.02f else 0.01f
         t.setLineSpacing(dpf(ctx, 2f), 1f)
         // A tight black shadow (about one real pixel) keeps text readable on stone without blurring it.

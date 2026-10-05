@@ -4,7 +4,7 @@ A floating quest guide that sits on top of Old School RuneScape on Android. It c
 
 It never reads, hooks or automates the game. You tick each step off yourself, so it works like having the wiki open beside you.
 
-**[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/Breadcrumbs.apk)** · [Website and install guide](https://ertas-del.github.io/OSRS-Quest-Helper-Android/) · free, no ads, no account
+**[Download the latest APK](https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases/latest/download/Breadcrumbs.apk)** · [Website and install guide](https://ertas-del.github.io/OSRS-Quest-Helper-Android/) · free, no ads, no account · [Tip on Ko-fi](https://ko-fi.com/breadcrumbsqh)
 
 > Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.
 
@@ -236,6 +236,10 @@ app/src/main/assets/transports.tsv, collision-map.zip, places.tsv   travel data
 signing/release.jks.enc           the release key, encrypted (unlocked by the RELEASE_PASSWORD secret)
 docs/                             the download page and privacy policy (GitHub Pages)
 ```
+
+## Support
+
+Breadcrumbs is free and nothing is locked. If it helps you, you can [leave a tip on Ko-fi](https://ko-fi.com/breadcrumbsqh). Tips don't unlock anything; they help keep the quest data and travel routes up to date.
 
 ## Credits
 

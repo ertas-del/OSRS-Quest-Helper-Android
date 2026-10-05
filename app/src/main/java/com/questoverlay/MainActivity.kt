@@ -173,6 +173,18 @@ class MainActivity : Activity() {
         )
         credit.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 8))
         content.addView(credit)
+
+        // Optional tip jar. Nothing in the app is locked behind it.
+        val tip = Ui.text(this, "Breadcrumbs is free. Enjoying it? Tip on Ko-fi ›", 12f, Ui.GOLD, bold = true)
+        tip.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 12))
+        tip.setOnClickListener {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(KOFI_URL)))
+            } catch (e: Exception) {
+                Toast.makeText(this, "No browser found to open Ko-fi.", Toast.LENGTH_SHORT).show()
+            }
+        }
+        content.addView(tip)
     }
 
     private fun searchBox(): View {
@@ -511,6 +523,7 @@ class MainActivity : Activity() {
         val NON_ALNUM = Regex("[^a-z0-9 ]")
         val SPACES = Regex("\\s+")
         const val REQUEST_NOTIFICATIONS = 100
+        const val KOFI_URL = "https://ko-fi.com/breadcrumbsqh"
         /** Wording required by Jagex's Fan Content Policy. */
         const val JAGEX_DISCLAIMER =
             "Created using intellectual property belonging to Jagex Limited under the terms of " +

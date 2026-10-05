@@ -37,6 +37,8 @@
     --body: "Atkinson Hyperlegible", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
+  /* The pixel font's "fi" ligature reads like an "A". */
+  * { font-variant-ligatures: none !important; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
@@ -211,6 +213,19 @@
   .does h3 { color: var(--green); }
   .doesnt h3 { color: #ff6b5e; }
 
+  .support { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; }
+  .support p { margin: 0; max-width: 52ch; }
+  .tip {
+    display: inline-block;
+    padding: 13px 20px 12px;
+    font: 700 19px/1 var(--pixel);
+    color: var(--yellow);
+    text-decoration: none;
+    text-shadow: 1px 1px 0 #000;
+    background: #4a3f30;
+  }
+  .tip:hover { color: var(--yellow); background: #54483a; }
+
   footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; border-top: 2px solid #000; }
   footer p { margin: 0 0 10px; max-width: 80ch; }
 
@@ -321,10 +336,18 @@
     <p class="prose" style="margin-top:20px">It works like having the wiki open in another window. The code is open on <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android">GitHub</a> for anyone to check.</p>
   </section>
 
+  <section id="support">
+    <h2>Keep it free</h2>
+    <div class="support">
+      <p>Breadcrumbs is free, with no ads and nothing locked. If it saved you a trip to the wiki, a tip on Ko-fi helps keep it up to date with new quests.</p>
+      <a class="tip stone" href="https://ko-fi.com/breadcrumbsqh">Tip on Ko-fi</a>
+    </div>
+  </section>
+
   <footer>
     <p>Created using intellectual property belonging to Jagex Limited under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated with Jagex.</p>
     <p>Quest steps from the RuneLite Quest Helper plugin by Zoinkwiz and travel data from the Shortest Path plugin by Skretzo, both BSD 2-Clause. Not affiliated with RuneLite.</p>
-    <p><a href="privacy.html">Privacy</a> &nbsp; <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android/issues">Report a problem</a> &nbsp; <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases">All releases</a></p>
+    <p><a href="privacy.html">Privacy</a> &nbsp; <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android/issues">Report a problem</a> &nbsp; <a href="https://github.com/ertas-del/OSRS-Quest-Helper-Android/releases">All releases</a> &nbsp; <a href="https://ko-fi.com/breadcrumbsqh">Ko-fi</a></p>
   </footer>
 </main>
 
