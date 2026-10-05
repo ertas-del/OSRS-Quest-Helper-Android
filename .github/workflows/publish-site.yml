@@ -29,8 +29,19 @@ jobs:
             echo "::notice::No PUBLIC_REPO_TOKEN secret yet; the website is still served from this repo."
             exit 0
           fi
+          # Say clearly what's wrong with the token, since run logs aren't always easy to read.
+          AUTH=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $PUBLIC_TOKEN" https://api.github.com/user)
+          if [ "$AUTH" != "200" ]; then
+            echo "::error::PUBLIC_REPO_TOKEN was rejected by GitHub (HTTP $AUTH). It may be mistyped, expired or deleted; make a new one."
+            exit 1
+          fi
+          SEEN=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $PUBLIC_TOKEN" "https://api.github.com/repos/${PUBLIC_REPO}/contents/README.md")
+          echo "::notice::Token is valid; reading ${PUBLIC_REPO} with it gave HTTP $SEEN"
           DEST="$RUNNER_TEMP/public"
-          git clone --depth 1 "https://x-access-token:${PUBLIC_TOKEN}@github.com/${PUBLIC_REPO}.git" "$DEST"
+          if ! git clone -q --depth 1 "https://x-access-token:${PUBLIC_TOKEN}@github.com/${PUBLIC_REPO}.git" "$DEST" 2> "$RUNNER_TEMP/clone.err"; then
+            echo "::error::Couldn't clone ${PUBLIC_REPO}: $(head -c 300 "$RUNNER_TEMP/clone.err" | tr '\n' ' ' | sed "s/${PUBLIC_TOKEN}/***/g")"
+            exit 1
+          fi
           rm -rf "$DEST/docs"
           cp -R docs "$DEST/docs"
           cp public/README.md "$DEST/README.md"
@@ -48,6 +59,9 @@ jobs:
             echo "::notice::Website already up to date"
           else
             git commit -q -m "Update website from ${GITHUB_SHA::7}"
-            git push -q origin HEAD
+            if ! git push -q origin HEAD 2> "$RUNNER_TEMP/push.err"; then
+              echo "::error::GitHub refused the push to ${PUBLIC_REPO}. The token needs Repository access: Breadcrumbs, and Contents: Read and write. Details: $(head -c 300 "$RUNNER_TEMP/push.err" | tr '\n' ' ' | sed "s/${PUBLIC_TOKEN}/***/g")"
+              exit 1
+            fi
             echo "::notice::Website copied to ${PUBLIC_REPO}"
           fi
