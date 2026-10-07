@@ -52,6 +52,7 @@ import com.questoverlay.capture.ScreenFacts
 import com.questoverlay.capture.VitalsEngine
 import com.questoverlay.capture.VitalsReader
 import com.questoverlay.capture.VitalsStore
+import com.questoverlay.farming.FarmTimer
 import com.questoverlay.farming.Farming
 import com.questoverlay.farming.FarmingStore
 import com.questoverlay.farming.SecateursAdvisor
@@ -152,6 +153,15 @@ class OverlayService : Service() {
     private lateinit var sailing: SailingStore
     private lateinit var slayer: SlayerStore
     private var slayerPanel = false
+    private var timersOpen = false
+    private var timerRefresh: (() -> Unit)? = null
+    private val timerTick = object : Runnable {
+        override fun run() {
+            if (root == null) return
+            timerRefresh?.invoke()
+            mainHandler.postDelayed(this, 30_000)
+        }
+    }
     private val locWorker = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     @Volatile private var locBusy = false
@@ -915,6 +925,110 @@ class OverlayService : Service() {
         return row
     }
 
+    private fun shortDur(ms: Long): String {
+        val mins = (ms + 59_999) / 60_000
+        return when {
+            ms <= 0 -> "ready"
+            mins < 60 -> "$mins min"
+            mins < 48 * 60 -> "${mins / 60} h ${mins % 60} min"
+            else -> "${mins / (24 * 60)} days"
+        }
+    }
+
+    /**
+     * Farming and birdhouse timers: one line (what's ready, what's next), tap for the list with a
+     * button to log a birdhouse. The numbers refresh every 30 seconds without redrawing the card.
+     */
+    private fun buildTimerStrip(): View? {
+        if (!farming.showStrip) {
+            timerRefresh = null
+            return null
+        }
+        farming.tidy()
+        val box = LinearLayout(this)
+        box.orientation = LinearLayout.VERTICAL
+        val p = Ui.dp(this, 6)
+        box.setPadding(p, p / 2, p / 2, p / 2)
+        box.background = Ui.rounded(this, Ui.STONE_DARK, 4, Ui.STROKE, 1)
+
+        val head = LinearLayout(this)
+        head.orientation = LinearLayout.HORIZONTAL
+        head.gravity = Gravity.CENTER_VERTICAL
+        val summary = Ui.text(this, "", 12f, Ui.TAN, bold = true)
+        summary.maxLines = 2
+        summary.ellipsize = TextUtils.TruncateAt.END
+        summary.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6))
+        summary.setOnClickListener { timersOpen = !timersOpen; render() }
+        head.addView(summary, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        box.addView(head)
+
+        val rowViews = ArrayList<Pair<TextView, FarmTimer>>()
+        if (timersOpen) {
+            val list = LinearLayout(this)
+            list.orientation = LinearLayout.VERTICAL
+            val timers = farming.timers.sortedBy { it.readyAt }
+            if (timers.isEmpty()) list.addView(Ui.text(this, "Nothing growing. Planting starts a timer by itself with 👁 on.", 12f, Ui.MUTED))
+            for (t in timers) {
+                val row = LinearLayout(this)
+                row.orientation = LinearLayout.HORIZONTAL
+                row.gravity = Gravity.CENTER_VERTICAL
+                val label = Ui.text(this, "", 12f, Ui.TEXT)
+                row.addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                row.addView(iconButton("\u2713") { farming.remove(t.id); render() })
+                list.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                rowViews.add(label to t)
+            }
+            val scroll = MaxHeightScrollView(this, listMaxHeight(180))
+            scroll.addView(list)
+            box.addView(scroll)
+
+            val buttons = LinearLayout(this)
+            buttons.orientation = LinearLayout.HORIZONTAL
+            val bird = Ui.button(this, "\uD83D\uDC26 Birdhouse placed", true) {
+                farming.birdhouse(1)
+                render()
+            }
+            buttons.addView(bird, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f))
+            val more = Ui.button(this, "More", false) { startActivity(Intent(this, com.questoverlay.farming.FarmingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            val mlp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            mlp.leftMargin = Ui.dp(this, 8)
+            buttons.addView(more, mlp)
+            val blp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            blp.topMargin = Ui.dp(this, 6)
+            box.addView(buttons, blp)
+        }
+
+        fun refresh() {
+            val now = System.currentTimeMillis()
+            val timers = farming.timers.sortedBy { it.readyAt }
+            val ready = timers.count { it.readyAt <= now }
+            val soon = timers.filter { it.readyAt > now }.take(2)
+            val text = when {
+                timers.isEmpty() -> "\u23F1 Timers \u00B7 none running"
+                else -> "\u23F1 " + listOfNotNull(
+                    if (ready > 0) "$ready ready" else null,
+                    *soon.map { "${if (it.crop == Farming.BIRDHOUSE) "Birdhouses" else it.crop} ${shortDur(it.readyAt - now)}" }.toTypedArray()
+                ).joinToString(" \u00B7 ")
+            }
+            summary.text = text + if (timersOpen) "  \u25BE" else "  \u25B8"
+            summary.setTextColor(if (ready > 0) Ui.GREEN else Ui.TAN)
+            for ((v, t) in rowViews) {
+                val left = t.readyAt - now
+                v.text = t.label + " \u2014 " + if (left <= 0) "ready \u2713" else "ready in ${shortDur(left)}"
+                v.setTextColor(if (left <= 0) Ui.GREEN else Ui.TEXT)
+            }
+        }
+        refresh()
+        timerRefresh = ::refresh
+        mainHandler.removeCallbacks(timerTick)
+        mainHandler.postDelayed(timerTick, 30_000)
+
+        val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lp.topMargin = Ui.dp(this, 6)
+        box.layoutParams = lp
+        return box
+    }
+
     /** Slayer task strip: what's left, tap for the monster card (where, wear, bring, food). */
     private fun buildSlayerStrip(): View? {
         val t = slayer.task ?: return null
@@ -1112,6 +1226,7 @@ class OverlayService : Service() {
         buildAlertBanner()?.let { card.addView(it) }
         buildNavStrip()?.let { card.addView(it) }
         buildSlayerStrip()?.let { card.addView(it) }
+        buildTimerStrip()?.let { card.addView(it) }
         buildSailPicker()?.let { card.addView(it) }
         card.addView(buildProgress(q, step))
         when {

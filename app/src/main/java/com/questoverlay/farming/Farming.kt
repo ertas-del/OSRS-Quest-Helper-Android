@@ -32,6 +32,10 @@ data class Crop(val name: String, val patch: Patch, val tickMinutes: Int, val st
 data class Planting(val crop: Crop, val count: Int)
 
 object Farming {
+    /** Birdhouses aren't crops: they run for a fixed 50 minutes (RuneLite's time-tracking plugin uses the same). */
+    const val BIRDHOUSE = "Birdhouses"
+    const val BIRDHOUSE_MINUTES = 50
+
     val CROPS: List<Crop> get() = CROP_TABLE
 
     fun crop(name: String): Crop? = CROPS.firstOrNull { it.name.equals(name, ignoreCase = true) }

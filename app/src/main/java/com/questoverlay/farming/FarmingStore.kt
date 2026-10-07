@@ -79,6 +79,30 @@ class FarmingStore(context: Context) {
         return timer
     }
 
+    /**
+     * A birdhouse was placed: they finish 50 minutes later. Placing several in one run counts as one
+     * timer (the count goes up and it's ready 50 minutes after the last one).
+     */
+    fun birdhouse(count: Int = 1, now: Long = System.currentTimeMillis()): FarmTimer {
+        val list = timers.toMutableList()
+        val readyAt = now + Farming.BIRDHOUSE_MINUTES * 60_000L
+        val recent = list.indexOfLast { it.crop == Farming.BIRDHOUSE && now - it.plantedAt < 20 * 60_000L && it.readyAt > now }
+        val timer = if (recent >= 0) {
+            val old = list[recent]
+            old.copy(count = (old.count + count).coerceAtMost(4), readyAt = maxOf(old.readyAt, readyAt)).also { list[recent] = it }
+        } else {
+            FarmTimer(now, Farming.BIRDHOUSE, count.coerceAtMost(4), now, readyAt, "Fossil Island").also { list.add(it) }
+        }
+        timers = list
+        schedule(timer)
+        return timer
+    }
+
+    /** Show the timers strip on the floating card (it's how you start a birdhouse timer). */
+    var showStrip: Boolean
+        get() = prefs.getBoolean("show_strip", true)
+        set(v) = prefs.edit().putBoolean("show_strip", v).apply()
+
     fun remove(id: Long) {
         timers = timers.filter { it.id != id }
         cancel(id)
@@ -128,6 +152,7 @@ class FarmingAlarmReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val text = when {
+            label.contains(Farming.BIRDHOUSE) -> "Empty them, then rebuild and refill for more bird nests."
             crop?.patch == Patch.HESPORI -> "Hespori is ready to fight at the Farming Guild."
             crop?.secateursHelp == true -> "Ready to harvest. Bring magic secateurs for +10%."
             else -> "Ready to harvest."

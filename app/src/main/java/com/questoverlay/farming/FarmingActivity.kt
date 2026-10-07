@@ -40,6 +40,7 @@ class FarmingActivity : ScreenActivity() {
                 "You get a notification when it's ready. Start one by hand below for anything it missed."
         )
         growingCard()
+        birdhouseCard()
         startCard()
         settingsCard()
         val credit = Ui.text(this, "Growth times from RuneLite's time-tracking plugin (BSD 2-Clause). " +
@@ -72,6 +73,16 @@ class FarmingActivity : ScreenActivity() {
                 rebuild()
             }
         }
+    }
+
+    private fun birdhouseCard() {
+        val c = card("Birdhouses")
+        note(c, "Birdhouses on Fossil Island finish 50 minutes after you fill them. Tap once for each one you place (up to 4); " +
+            "they count as one timer and you get a notification when it's time to empty them.")
+        val now = System.currentTimeMillis()
+        val running = store.timers.firstOrNull { it.crop == Farming.BIRDHOUSE && it.readyAt > now }
+        if (running != null) note(c, "${running.count} placed \u00B7 ready in ${duration(running.readyAt - now)}", Ui.GREEN, 13f)
+        c.addView(spaced(Ui.button(this, "Birdhouse placed (+1)", true) { store.birdhouse(1); rebuild() }, 6))
     }
 
     private fun startCard() {
@@ -118,6 +129,10 @@ class FarmingActivity : ScreenActivity() {
 
     private fun settingsCard() {
         val c = card("Settings")
+        switchRow(c, "Show timers on the floating card", "A strip under the title with what's growing and a birdhouse button.", store.showStrip) {
+            store.showStrip = it
+            if (com.questoverlay.OverlayService.running) startService(android.content.Intent(this, com.questoverlay.OverlayService::class.java).setAction(com.questoverlay.OverlayService.ACTION_REFRESH))
+        }
         switchRow(c, "Start timers from chat", "Needs 👁 Auto-check on while you plant.", store.autoStart) { store.autoStart = it }
         switchRow(
             c, "I always carry magic secateurs",
