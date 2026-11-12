@@ -67,13 +67,15 @@ import com.questoverlay.account.Advisor
 import com.questoverlay.account.Req
 import com.questoverlay.sailing.NavTarget
 import com.questoverlay.sailing.SailPlanner
+import com.questoverlay.sailing.SailingBubble
+import com.questoverlay.sailing.SailingCompanion
+import com.questoverlay.sailing.SailingData
+import com.questoverlay.sailing.SailingStore
 import com.questoverlay.slayer.SlayerChat
 import com.questoverlay.slayer.SlayerData
 import com.questoverlay.slayer.SlayerEvent
 import com.questoverlay.slayer.SlayerStore
 import com.questoverlay.slayer.SlayerViews
-import com.questoverlay.sailing.SailingData
-import com.questoverlay.sailing.SailingStore
 import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.Executors
@@ -174,6 +176,10 @@ class OverlayService : Service() {
     private var navCompass: CompassView? = null
     private var navLabel: TextView? = null
     private var sailPicker = false
+    /** Which tab the sailing companion had open, so a redraw doesn't jump back to Route. */
+    private var sailTab = 0
+    private var sailPanel: SailingCompanion? = null
+    private var sailBubble: SailingBubble? = null
     /** Diary step list: also show the steps already behind you (off by default). */
     private var showDoneSteps = false
 
@@ -791,54 +797,40 @@ class OverlayService : Service() {
         render()
     }
 
-    /** The ⛵ list inside the card: every sailing route, both ways, in a scrolling box. Nearest port's routes first. */
+    /** The sailing companion inside the card: route, ports, charts, and weather spots. */
     private fun buildSailPicker(): View? {
         if (!sailPicker) return null
-        val data = try { SailingData.load(this) } catch (e: Exception) { return null }
-        val level = TravelStore(this).levels["Sailing"]
-        val f = fix?.takeIf { System.currentTimeMillis() - it.at < 60_000 }
-        val here = f?.let { SailPlanner.nearestPort(data.ports, it.tileX, it.tileY) }?.takeIf { it.second <= 150 }?.first?.name
-        val levelOf = data.ports.associate { it.name to it.level }
-        val all = data.routes.flatMap { listOf(it.from to it.to, it.to to it.from) }.distinct()
-        val sorted = all.sortedWith(compareBy({ if (it.first == here) 0 else 1 }, { it.first }, { it.second }))
-
-        val box = LinearLayout(this)
-        box.orientation = LinearLayout.VERTICAL
-        val p = Ui.dp(this, 6)
-        box.setPadding(p, p, p, p)
-        box.background = Ui.rounded(this, Ui.STONE_DARK, 4, Ui.STROKE, 1)
-
-        val head = LinearLayout(this)
-        head.orientation = LinearLayout.HORIZONTAL
-        head.gravity = Gravity.CENTER_VERTICAL
-        val title = Ui.text(this, if (here != null) "⛵ Routes · you're near $here" else "⛵ Sailing routes", 13f, Ui.GOLD, bold = true)
-        head.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        head.addView(iconButton("✕") { sailPicker = false; render() })
-        box.addView(head)
-
-        val list = LinearLayout(this)
-        list.orientation = LinearLayout.VERTICAL
-        for ((from, to) in sorted) {
-            val pts = SailPlanner.points(data.routes, from, to) ?: continue
-            val need = levelOf[to]
-            val locked = level != null && need != null && level < need
-            val row = LinearLayout(this)
-            row.orientation = LinearLayout.VERTICAL
-            row.setPadding(Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6))
-            val name = Ui.text(this, "$from → $to", 13f, if (from == here) Ui.GREEN else if (locked) Ui.MUTED else Ui.TEXT, bold = true)
-            row.addView(name)
-            row.addView(Ui.text(this, "${pts.size - 1} waypoints" + (if (need != null) " · Sailing $need" else "") + (if (locked) " 🔒" else ""), 11f, Ui.MUTED))
-            row.setOnClickListener { startRoute(from, to) }
-            list.addView(row)
-        }
-        val scroll = ScrollView(this)
-        scroll.addView(list)
-        box.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 190)))
-
+        val panel = SailingCompanion(
+            context = this,
+            store = sailing,
+            initialTab = sailTab,
+            initialFix = fix,
+            onTab = { sailTab = it },
+            onPoint = { t ->
+                sailing.target = t
+                sailPicker = false
+                render()
+            },
+            onStartRoute = { from, to -> startRoute(from, to) },
+            onChart = { id ->
+                sailing.charted = sailing.charted + id
+                if (sailing.target?.chartId == id) sailing.target = null
+                render()
+            },
+            onClear = {
+                sailing.target = null
+                render()
+            },
+            onClose = {
+                sailPicker = false
+                render()
+            }
+        )
+        sailPanel = panel
         val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         lp.topMargin = Ui.dp(this, 6)
-        box.layoutParams = lp
-        return box
+        panel.layoutParams = lp
+        return panel
     }
 
     /** The minimap fix only makes sense for targets on the same map (surface vs Prifddinas). */
@@ -865,6 +857,12 @@ class OverlayService : Service() {
             }
         }
         val t = sailing.target
+        val fresh = fix?.takeIf { System.currentTimeMillis() - it.at < 120_000 }
+        sailBubble?.let { b ->
+            if (fresh != null && t != null && pointable(fresh, t.x, t.y)) b.update(fresh.distanceTo(t.x, t.y))
+            else b.update(-1)
+        }
+        sailPanel?.refresh(fix)
         navCompass?.let { c ->
             if (f != null && t != null && pointable(f, t.x, t.y)) {
                 c.northAngle = f.cameraAngle
@@ -1189,6 +1187,8 @@ class OverlayService : Service() {
         liveLabel = null
         navCompass = null
         navLabel = null
+        sailPanel = null
+        sailBubble = null
         frame.removeAllViews()
         frame.alpha = store.opacity
         frame.addView(if (collapsed) buildBubble(q) else buildCard(q))
@@ -1197,6 +1197,14 @@ class OverlayService : Service() {
     }
 
     private fun buildBubble(q: Quest): View {
+        val target = sailing.target
+        if (target != null) {
+            val short = target.name.substringBefore(" (").let { if (it.length <= 10) it else it.take(9) + "\u2026" }
+            val bubble = SailingBubble(this, short, -1) { setCollapsed(false) }
+            sailBubble = bubble
+            bubble.setOnTouchListener(DragListener { setCollapsed(false) })
+            return bubble
+        }
         val step = store.stepIndex(q).coerceIn(0, q.steps.size)
         val size = Ui.dp(this, 52)
         val bubble = TextView(this)
@@ -1280,7 +1288,7 @@ class OverlayService : Service() {
         row.addView(eye)
         val sail = iconButton("\u26F5") { sailPicker = !sailPicker; render() }
         sail.alpha = if (sailPicker || sailing.target != null) 1f else 0.45f
-        sail.contentDescription = "Sailing routes"
+        sail.contentDescription = "Sailing companion"
         row.addView(sail)
         val voice = iconButton(if (speaker.muted) "\uD83D\uDD07" else "\uD83D\uDD0A") {
             speaker.muted = !speaker.muted
