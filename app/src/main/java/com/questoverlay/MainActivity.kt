@@ -139,6 +139,7 @@ class MainActivity : Activity() {
         fanMade.setPadding(0, 0, 0, Ui.dp(this, 14))
         content.addView(fanMade)
 
+        content.addView(bubbleCard())
         content.addView(accountCard())
         if (!Authenticity.isOfficial(this)) content.addView(unofficialCard())
         content.addView(permissionCard())
@@ -434,6 +435,30 @@ class MainActivity : Activity() {
                 Toast.makeText(this, OFFICIAL_SITE, Toast.LENGTH_LONG).show()
             }
         })
+        return c
+    }
+
+    /** Open the bubble over the game without picking a quest first. */
+    private fun bubbleCard(): View {
+        val c = card()
+        c.addView(Ui.text(this, "Bubble", 15f, Ui.TEXT, bold = true))
+        val running = OverlayService.running
+        val why = Ui.text(
+            this,
+            if (running) "The bubble is running. Bring it up here, or use Show / hide on the notification while you're in the game."
+            else "Opens the floating card on top of the game with your quest, Slayer, timers and sailing. It remembers the quest you were last on.",
+            12f, Ui.MUTED
+        )
+        why.setPadding(0, Ui.dp(this, 3), 0, 0)
+        c.addView(why)
+        c.addView(spaced(Ui.button(this, if (running) "Bring up the bubble" else "Open bubble", true) {
+            OverlayLauncher.show(this)
+            content.postDelayed({ refresh() }, 500)
+        }, 8))
+        c.addView(spaced(Ui.button(this, "Open as a small bubble", false) {
+            OverlayLauncher.show(this, smallBubble = true)
+            content.postDelayed({ refresh() }, 500)
+        }, 6))
         return c
     }
 

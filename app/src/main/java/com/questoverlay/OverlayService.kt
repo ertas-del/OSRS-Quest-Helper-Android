@@ -236,6 +236,25 @@ class OverlayService : Service() {
             return START_NOT_STICKY
         }
 
+        var startCollapsed = false
+        when (intent?.action) {
+            ACTION_SHOW -> {
+                startCollapsed = intent?.getBooleanExtra(EXTRA_COLLAPSED, false) ?: false
+                if (root != null) {
+                    // Already up: just bring it back as asked, keeping the quest, tab and scroll where they were.
+                    collapsed = startCollapsed
+                    render()
+                    return START_NOT_STICKY
+                }
+            }
+            ACTION_TOGGLE -> {
+                if (root != null) {
+                    setCollapsed(!collapsed)
+                    return START_NOT_STICKY
+                }
+            }
+        }
+
         if (!Settings.canDrawOverlays(this)) {
             toast("Allow \"Display over other apps\" for Breadcrumbs first.")
             stopOverlay()
@@ -253,7 +272,7 @@ class OverlayService : Service() {
         quest = chosen
         store.activeQuestId = chosen.id
         mode = Mode.STEP
-        collapsed = false
+        collapsed = startCollapsed
         openPuzzle = null
 
         ensureOverlay()
@@ -294,12 +313,21 @@ class OverlayService : Service() {
             "Stop",
             stop
         ).build()
+        val toggle = PendingIntent.getService(
+            this, 2, Intent(this, OverlayService::class.java).setAction(ACTION_TOGGLE), flags
+        )
+        val toggleAction = Notification.Action.Builder(
+            Icon.createWithResource(this, android.R.drawable.ic_menu_view),
+            "Show / hide",
+            toggle
+        ).build()
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setContentTitle("Breadcrumbs is running")
             .setContentText("Tap to pick a quest")
             .setContentIntent(open)
             .setOngoing(true)
+            .addAction(toggleAction)
             .addAction(stopAction)
             .build()
 
@@ -1889,6 +1917,11 @@ class OverlayService : Service() {
     companion object {
         const val ACTION_STOP = "com.questoverlay.STOP"
         const val ACTION_REFRESH = "com.questoverlay.REFRESH"
+        /** Show the card (or the small bubble), starting the overlay if it isn't up. */
+        const val ACTION_SHOW = "com.questoverlay.SHOW"
+        /** Notification button: flip between the card and the small bubble. */
+        const val ACTION_TOGGLE = "com.questoverlay.TOGGLE"
+        const val EXTRA_COLLAPSED = "collapsed"
         const val EXTRA_QUEST_ID = "quest_id"
         const val ACTION_CAPTURE_GRANTED = "com.questoverlay.CAPTURE_GRANTED"
         const val ACTION_CAPTURE_DENIED = "com.questoverlay.CAPTURE_DENIED"

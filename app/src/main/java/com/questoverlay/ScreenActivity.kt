@@ -60,6 +60,13 @@ abstract class ScreenActivity : Activity() {
             t.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 8))
             content.addView(t)
         }
+        // Every tool screen can put the bubble over the game from here.
+        val chip = Ui.chip(this, if (OverlayService.running) "Bring up the bubble" else "Open bubble in game", false)
+        chip.setOnClickListener {
+            OverlayLauncher.show(this)
+            main.postDelayed({ rebuild() }, 500)
+        }
+        content.addView(spaced(chip, 2))
     }
 
     protected fun card(heading: String? = null): LinearLayout {
